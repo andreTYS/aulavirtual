@@ -1,0 +1,86 @@
+<?php
+declare(strict_types=1);
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/functions.php';
+requireRole('administrador');
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    requireValidCsrf();
+    $action = (string) ($_POST['action'] ?? '');
+
+    if ($action === 'create') {
+        $nombre = trim((string) ($_POST['nombre'] ?? ''));
+        if ($nombre === '') {
+            setFlash('danger', 'El nombre de la carrera es obligatorio.');
+        } else {
+            try {
+                $stmt = $pdo->prepare('INSERT INTO carreras (nombre) VALUES (:nombre)');
+                $stmt->execute(['nombre' => $nombre]);
+                setFlash('success', 'Carrera creada.');
+            } catch (PDOException $e) {
+                setFlash('danger', 'Ya existe una carrera con ese nombre.');
+            }
+        }
+    } elseif ($action === 'delete') {
+        $id = (int) ($_POST['id'] ?? 0);
+        try {
+            $stmt = $pdo->prepare('DELETE FROM carreras WHERE id = :id');
+            $stmt->execute(['id' => $id]);
+            setFlash('success', 'Carrera eliminada.');
+        } catch (PDOException $e) {
+            setFlash('danger', 'No se puede eliminar: hay cursos asociados a esta carrera.');
+        }
+    }
+    redirect('/admin/carreras.php');
+}
+
+$carreras = $pdo->query('SELECT c.*, (SELECT COUNT(*) FROM cursos WHERE carrera_id = c.id) AS total_cursos FROM carreras c ORDER BY nombre')->fetchAll();
+
+$pageTitle = 'Carreras';
+require __DIR__ . '/../includes/header.php';
+?>
+<h2 class="mb-4">Carreras</h2>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="post" class="row g-2">
+            <?= csrfField() ?>
+            <input type="hidden" name="action" value="create">
+            <div class="col-md-8">
+                <input type="text" name="nombre" class="form-control" placeholder="Nombre de la carrera" required>
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary w-100">+ Agregar carrera</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light"><tr><th>Carrera</th><th>Cursos</th><th class="text-end">Acciones</th></tr></thead>
+            <tbody>
+            <?php foreach ($carreras as $c): ?>
+                <tr>
+                    <td><?= e($c['nombre']) ?></td>
+                    <td><?= (int) $c['total_cursos'] ?></td>
+                    <td class="text-end">
+                        <form method="post" class="d-inline" onsubmit="return confirm('¿Eliminar esta carrera?');">
+                            <?= csrfField() ?>
+                            <input type="hidden" name="action" value="delete">
+                            <input type="hidden" name="id" value="<?= (int) $c['id'] ?>">
+                            <button class="btn btn-sm btn-outline-danger" type="submit">Eliminar</button>
+                        </form>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+            <?php if (!$carreras): ?>
+                <tr><td colspan="3" class="text-center text-muted py-4">No hay carreras registradas.</td></tr>
+            <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+<?php require __DIR__ . '/../includes/footer.php'; ?>
