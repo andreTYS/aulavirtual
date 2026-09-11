@@ -52,7 +52,7 @@ $alumnos = $pdo->prepare(
      FROM matriculas m
      JOIN usuarios u ON u.id = m.estudiante_id
      LEFT JOIN entregas e ON e.tarea_id = :tarea_id AND e.estudiante_id = u.id
-     WHERE m.curso_id = :curso_id
+     WHERE m.curso_id = :curso_id AND m.estado = "activo"
      ORDER BY u.apellidos, u.nombre'
 );
 $alumnos->execute(['tarea_id' => $tareaId, 'curso_id' => $tarea['curso_id']]);

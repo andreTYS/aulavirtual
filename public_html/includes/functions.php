@@ -109,3 +109,31 @@ function isPastDue(string $fechaLimite): bool
 {
     return strtotime($fechaLimite) < time();
 }
+
+function formatFechaEs(?string $fecha): string
+{
+    if (!$fecha) {
+        return '-';
+    }
+    $ts = strtotime($fecha);
+    return $ts ? date('d/m/Y', $ts) : '-';
+}
+
+function formatHoraEs(?string $hora): string
+{
+    if (!$hora) {
+        return '-';
+    }
+    $ts = strtotime($hora);
+    return $ts ? date('H:i', $ts) : '-';
+}
+
+function isSessionToday(string $fecha): bool
+{
+    return date('Y-m-d') === date('Y-m-d', strtotime($fecha));
+}
+
+function isSessionPast(string $fecha): bool
+{
+    return strtotime($fecha) < strtotime(date('Y-m-d'));
+}

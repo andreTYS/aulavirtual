@@ -30,3 +30,9 @@ try {
     http_response_code(500);
     die('No se pudo conectar a la base de datos. Intente mas tarde.');
 }
+
+// Alinea la zona horaria de la sesion MySQL con la de PHP (America/Lima,
+// UTC-5) para que CURDATE()/NOW() concuerden con date() del lado de PHP,
+// sin depender de que el servidor tenga cargadas las tablas de zonas
+// horarias (mysql.time_zone_name).
+$pdo->exec("SET time_zone = '-05:00'");

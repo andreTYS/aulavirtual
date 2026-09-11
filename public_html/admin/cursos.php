@@ -15,12 +15,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
 }
 
 $cursos = $pdo->query(
-    "SELECT c.*, car.nombre AS carrera_nombre,
+    "SELECT c.*, car.nombre AS carrera_nombre, p.nombre AS periodo_nombre,
             CONCAT(d.nombre, ' ', d.apellidos) AS docente_nombre,
-            (SELECT COUNT(*) FROM matriculas m WHERE m.curso_id = c.id) AS total_matriculados
+            (SELECT COUNT(*) FROM matriculas m WHERE m.curso_id = c.id AND m.estado = 'activo') AS total_matriculados
      FROM cursos c
      LEFT JOIN carreras car ON car.id = c.carrera_id
      LEFT JOIN usuarios d ON d.id = c.docente_id
+     LEFT JOIN periodos_academicos p ON p.id = c.periodo_academico_id
      ORDER BY c.created_at DESC"
 )->fetchAll();
 
@@ -35,13 +36,15 @@ require __DIR__ . '/../includes/header.php';
 <div class="av-table-wrap">
     <table class="av-table">
         <thead>
-            <tr><th>Curso</th><th>Carrera</th><th>Docente</th><th>Matriculados</th><th>Estado</th><th></th></tr>
+            <tr><th>Curso</th><th>Carrera</th><th>Ciclo</th><th>Periodo</th><th>Docente</th><th>Matriculados</th><th>Estado</th><th></th></tr>
         </thead>
         <tbody>
         <?php foreach ($cursos as $c): ?>
             <tr>
                 <td><strong><?= e($c['nombre']) ?></strong></td>
                 <td><?= e($c['carrera_nombre'] ?? '-') ?></td>
+                <td><?= $c['ciclo'] ? (int) $c['ciclo'] : '-' ?></td>
+                <td><?= e($c['periodo_nombre'] ?? '-') ?></td>
                 <td><?= e($c['docente_nombre'] ?? 'Sin asignar') ?></td>
                 <td><?= (int) $c['total_matriculados'] ?></td>
                 <td>
@@ -61,7 +64,7 @@ require __DIR__ . '/../includes/header.php';
             </tr>
         <?php endforeach; ?>
         <?php if (!$cursos): ?>
-            <tr><td colspan="6" class="av-empty">No hay cursos registrados.</td></tr>
+            <tr><td colspan="8" class="av-empty">No hay cursos registrados.</td></tr>
         <?php endif; ?>
         </tbody>
     </table>

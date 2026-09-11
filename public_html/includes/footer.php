@@ -19,7 +19,7 @@ document.querySelectorAll('.av-tab').forEach(function (tab) {
         if (target) target.classList.add('active');
     });
 });
-// Accordion (unidades)
+// Accordion (sesiones)
 document.querySelectorAll('.av-accordion-header').forEach(function (header) {
     header.addEventListener('click', function () {
         header.closest('.av-accordion-item').classList.toggle('open');

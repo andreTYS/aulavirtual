@@ -8,7 +8,10 @@ requireRole('administrador');
 $id = isset($_GET['id']) ? (int) $_GET['id'] : (isset($_POST['id']) ? (int) $_POST['id'] : 0);
 $editing = $id > 0;
 
-$curso = ['nombre' => '', 'descripcion' => '', 'carrera_id' => '', 'docente_id' => '', 'activo' => 1];
+$curso = [
+    'nombre' => '', 'descripcion' => '', 'carrera_id' => '', 'docente_id' => '',
+    'ciclo' => '', 'periodo_academico_id' => '', 'activo' => 1,
+];
 
 if ($editing) {
     $stmt = $pdo->prepare('SELECT * FROM cursos WHERE id = :id');
@@ -31,33 +34,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $curso['carrera_id'] = (int) ($_POST['carrera_id'] ?? 0);
     $docenteRaw = (string) ($_POST['docente_id'] ?? '');
     $curso['docente_id'] = $docenteRaw === '' ? null : (int) $docenteRaw;
+    $cicloRaw = (string) ($_POST['ciclo'] ?? '');
+    $curso['ciclo'] = $cicloRaw === '' ? null : (int) $cicloRaw;
+    $periodoRaw = (string) ($_POST['periodo_academico_id'] ?? '');
+    $curso['periodo_academico_id'] = $periodoRaw === '' ? null : (int) $periodoRaw;
     $curso['activo'] = isset($_POST['activo']) ? 1 : 0;
 
     if ($curso['nombre'] === '') $errors[] = 'El nombre del curso es obligatorio.';
     if ($curso['carrera_id'] <= 0) $errors[] = 'Debe seleccionar una carrera.';
+    if ($curso['ciclo'] !== null && ($curso['ciclo'] < 1 || $curso['ciclo'] > 20)) {
+        $errors[] = 'El ciclo debe estar entre 1 y 20.';
+    }
 
     if (!$errors) {
+        $fields = [
+            'nombre' => $curso['nombre'], 'descripcion' => $curso['descripcion'],
+            'carrera_id' => $curso['carrera_id'], 'docente_id' => $curso['docente_id'],
+            'ciclo' => $curso['ciclo'], 'periodo_academico_id' => $curso['periodo_academico_id'],
+            'activo' => $curso['activo'],
+        ];
         if ($editing) {
-            $stmt = $pdo->prepare(
+            $fields['id'] = $id;
+            $pdo->prepare(
                 'UPDATE cursos SET nombre=:nombre, descripcion=:descripcion, carrera_id=:carrera_id,
-                 docente_id=:docente_id, activo=:activo WHERE id=:id'
-            );
-            $stmt->execute([
-                'nombre' => $curso['nombre'], 'descripcion' => $curso['descripcion'],
-                'carrera_id' => $curso['carrera_id'], 'docente_id' => $curso['docente_id'],
-                'activo' => $curso['activo'], 'id' => $id,
-            ]);
+                 docente_id=:docente_id, ciclo=:ciclo, periodo_academico_id=:periodo_academico_id, activo=:activo
+                 WHERE id=:id'
+            )->execute($fields);
             setFlash('success', 'Curso actualizado.');
         } else {
-            $stmt = $pdo->prepare(
-                'INSERT INTO cursos (nombre, descripcion, carrera_id, docente_id, activo)
-                 VALUES (:nombre, :descripcion, :carrera_id, :docente_id, :activo)'
-            );
-            $stmt->execute([
-                'nombre' => $curso['nombre'], 'descripcion' => $curso['descripcion'],
-                'carrera_id' => $curso['carrera_id'], 'docente_id' => $curso['docente_id'],
-                'activo' => $curso['activo'],
-            ]);
+            $pdo->prepare(
+                'INSERT INTO cursos (nombre, descripcion, carrera_id, docente_id, ciclo, periodo_academico_id, activo)
+                 VALUES (:nombre, :descripcion, :carrera_id, :docente_id, :ciclo, :periodo_academico_id, :activo)'
+            )->execute($fields);
             setFlash('success', 'Curso creado.');
         }
         redirect('/admin/cursos.php');
@@ -66,6 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $carreras = $pdo->query('SELECT id, nombre FROM carreras ORDER BY nombre')->fetchAll();
 $docentes = $pdo->query("SELECT id, nombre, apellidos FROM usuarios WHERE rol = 'docente' AND activo = 1 ORDER BY apellidos")->fetchAll();
+$periodos = $pdo->query('SELECT id, nombre, activo FROM periodos_academicos ORDER BY fecha_inicio DESC')->fetchAll();
 
 $pageTitle = $editing ? 'Editar curso' : 'Nuevo curso';
 require __DIR__ . '/../includes/header.php';
@@ -75,6 +84,12 @@ require __DIR__ . '/../includes/header.php';
 <?php if ($errors): ?>
     <div class="av-alert av-alert--danger">
         <span><?php foreach ($errors as $err): ?><?= e($err) ?><br><?php endforeach; ?></span>
+    </div>
+<?php endif; ?>
+
+<?php if (!$periodos): ?>
+    <div class="av-alert av-alert--danger">
+        <span>No hay periodos académicos creados. <a href="/admin/periodos.php" style="text-decoration:underline">Crea uno primero</a>.</span>
     </div>
 <?php endif; ?>
 
@@ -109,6 +124,21 @@ require __DIR__ . '/../includes/header.php';
                     <?php foreach ($docentes as $doc): ?>
                         <option value="<?= (int) $doc['id'] ?>" <?= (int) ($curso['docente_id'] ?? 0) === (int) $doc['id'] ? 'selected' : '' ?>>
                             <?= e($doc['nombre'] . ' ' . $doc['apellidos']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="av-fg">
+                <label>Ciclo</label>
+                <input type="number" name="ciclo" min="1" max="20" value="<?= e((string) ($curso['ciclo'] ?? '')) ?>" placeholder="Ej. 3">
+            </div>
+            <div class="av-fg">
+                <label>Periodo académico</label>
+                <select name="periodo_academico_id">
+                    <option value="">Sin asignar</option>
+                    <?php foreach ($periodos as $p): ?>
+                        <option value="<?= (int) $p['id'] ?>" <?= (int) ($curso['periodo_academico_id'] ?? 0) === (int) $p['id'] ? 'selected' : '' ?>>
+                            <?= e($p['nombre']) ?><?= $p['activo'] ? ' (activo)' : '' ?>
                         </option>
                     <?php endforeach; ?>
                 </select>

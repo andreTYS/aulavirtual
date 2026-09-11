@@ -42,5 +42,9 @@ require __DIR__ . '/../includes/header.php';
         <strong>Carreras</strong>
         <span>Programas de estudio del instituto.</span>
     </a>
+    <a class="av-action-card" href="/admin/periodos.php">
+        <strong>Periodos académicos</strong>
+        <span>Ciclos de matrícula (ej. 2026-II).</span>
+    </a>
 </div>
 <?php require __DIR__ . '/../includes/footer.php'; ?>

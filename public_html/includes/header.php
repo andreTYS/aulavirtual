@@ -42,6 +42,7 @@ function navActive(string $path): string
                 <a class="av-nav__item<?= navActive('/admin/usuarios.php') . navActive('/admin/usuario_form.php') ?>" href="/admin/usuarios.php">Usuarios</a>
                 <a class="av-nav__item<?= navActive('/admin/cursos.php') . navActive('/admin/curso_form.php') . navActive('/admin/matriculas.php') ?>" href="/admin/cursos.php">Cursos</a>
                 <a class="av-nav__item<?= navActive('/admin/carreras.php') ?>" href="/admin/carreras.php">Carreras</a>
+                <a class="av-nav__item<?= navActive('/admin/periodos.php') ?>" href="/admin/periodos.php">Periodos académicos</a>
             <?php elseif ($user['rol'] === 'docente'): ?>
                 <div class="av-nav__group">Docencia</div>
                 <a class="av-nav__item<?= navActive('/docente/index.php') ?>" href="/docente/index.php">Mis cursos</a>
