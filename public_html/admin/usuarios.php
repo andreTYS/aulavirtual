@@ -52,6 +52,7 @@ require __DIR__ . '/../includes/header.php';
 ?>
 <div class="av-page-header">
     <h2>Usuarios</h2>
+    <a href="/admin/export_usuarios.php?rol=<?= e($rolFiltro) ?>" class="av-btn av-btn--outline"><?= avIcon('download') ?> Exportar CSV</a>
     <a href="/admin/usuario_form.php" class="av-btn av-btn--primary">+ Nuevo usuario</a>
 </div>
 

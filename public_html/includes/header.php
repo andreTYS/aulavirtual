@@ -38,22 +38,23 @@ function navActive(string $path): string
         <nav class="av-nav">
             <?php if ($user['rol'] === 'administrador'): ?>
                 <div class="av-nav__group">Gestión</div>
-                <a class="av-nav__item<?= navActive('/admin/index.php') ?>" href="/admin/index.php">Panel</a>
-                <a class="av-nav__item<?= navActive('/admin/usuarios.php') . navActive('/admin/usuario_form.php') ?>" href="/admin/usuarios.php">Usuarios</a>
-                <a class="av-nav__item<?= navActive('/admin/cursos.php') . navActive('/admin/curso_form.php') . navActive('/admin/matriculas.php') ?>" href="/admin/cursos.php">Cursos</a>
-                <a class="av-nav__item<?= navActive('/admin/carreras.php') ?>" href="/admin/carreras.php">Carreras</a>
-                <a class="av-nav__item<?= navActive('/admin/periodos.php') ?>" href="/admin/periodos.php">Periodos académicos</a>
+                <a class="av-nav__item<?= navActive('/admin/index.php') ?>" href="/admin/index.php"><?= avIcon('grid') ?> Panel</a>
+                <a class="av-nav__item<?= navActive('/admin/usuarios.php') . navActive('/admin/usuario_form.php') ?>" href="/admin/usuarios.php"><?= avIcon('users') ?> Usuarios</a>
+                <a class="av-nav__item<?= navActive('/admin/cursos.php') . navActive('/admin/curso_form.php') . navActive('/admin/matriculas.php') ?>" href="/admin/cursos.php"><?= avIcon('book') ?> Cursos</a>
+                <a class="av-nav__item<?= navActive('/admin/carreras.php') ?>" href="/admin/carreras.php"><?= avIcon('graduation') ?> Carreras</a>
+                <a class="av-nav__item<?= navActive('/admin/periodos.php') ?>" href="/admin/periodos.php"><?= avIcon('calendar') ?> Periodos académicos</a>
+                <a class="av-nav__item<?= navActive('/admin/avisos.php') ?>" href="/admin/avisos.php"><?= avIcon('megaphone') ?> Avisos</a>
             <?php elseif ($user['rol'] === 'docente'): ?>
                 <div class="av-nav__group">Docencia</div>
-                <a class="av-nav__item<?= navActive('/docente/index.php') ?>" href="/docente/index.php">Mis cursos</a>
+                <a class="av-nav__item<?= navActive('/docente/index.php') ?>" href="/docente/index.php"><?= avIcon('book') ?> Mis cursos</a>
             <?php elseif ($user['rol'] === 'estudiante'): ?>
                 <div class="av-nav__group">Aprendizaje</div>
-                <a class="av-nav__item<?= navActive('/estudiante/index.php') ?>" href="/estudiante/index.php">Mis cursos</a>
-                <a class="av-nav__item<?= navActive('/estudiante/calificaciones.php') ?>" href="/estudiante/calificaciones.php">Calificaciones</a>
+                <a class="av-nav__item<?= navActive('/estudiante/index.php') ?>" href="/estudiante/index.php"><?= avIcon('book') ?> Mis cursos</a>
+                <a class="av-nav__item<?= navActive('/estudiante/calificaciones.php') ?>" href="/estudiante/calificaciones.php"><?= avIcon('star') ?> Calificaciones</a>
             <?php endif; ?>
         </nav>
         <div class="av-sidebar__footer">
-            <a href="/logout.php" class="av-btn av-btn--white-ghost av-btn--sm av-btn--block">Cerrar sesión</a>
+            <a href="/logout.php" class="av-btn av-btn--white-ghost av-btn--sm av-btn--block"><?= avIcon('logout') ?> Cerrar sesión</a>
         </div>
     </aside>
     <div class="av-main">

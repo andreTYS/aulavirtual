@@ -20,12 +20,21 @@ $stmt = $pdo->prepare(
 $stmt->execute(['docente_id' => $docenteId]);
 $cursos = $stmt->fetchAll();
 
+$avisos = $pdo->prepare(
+    "SELECT a.*, c.nombre AS curso_nombre FROM avisos a
+     LEFT JOIN cursos c ON c.id = a.curso_id
+     WHERE a.curso_id IS NULL OR a.curso_id IN (SELECT id FROM cursos WHERE docente_id = :docente_id)
+     ORDER BY a.created_at DESC LIMIT 5"
+);
+$avisos->execute(['docente_id' => $docenteId]);
+$avisos = $avisos->fetchAll();
+
 $pageTitle = 'Mis cursos';
 require __DIR__ . '/../includes/header.php';
 ?>
 <div class="av-page-header"><h2>Mis cursos</h2></div>
 
-<div class="av-course-grid">
+<div class="av-course-grid" style="margin-bottom:22px">
     <?php foreach ($cursos as $c): ?>
         <div class="av-course-card">
             <div class="av-course-card__top"></div>
@@ -41,5 +50,27 @@ require __DIR__ . '/../includes/header.php';
             <span>Aún no tiene cursos asignados. Contacte al administrador.</span>
         </div>
     <?php endif; ?>
+</div>
+
+<div class="av-card">
+    <h3>Últimos avisos</h3>
+    <div class="av-list">
+        <?php foreach ($avisos as $a): ?>
+            <div class="av-list-item">
+                <div>
+                    <div class="content-title">
+                        <?= e($a['titulo']) ?>
+                        <?php if ($a['curso_nombre']): ?><span class="av-badge av-badge--blue"><?= e($a['curso_nombre']) ?></span>
+                        <?php else: ?><span class="av-badge av-badge--amber">General</span><?php endif; ?>
+                    </div>
+                    <div class="content-desc"><?= nl2br(e($a['contenido'])) ?></div>
+                    <div class="content-desc" style="margin-top:4px"><?= formatDateEs($a['created_at']) ?></div>
+                </div>
+            </div>
+        <?php endforeach; ?>
+        <?php if (!$avisos): ?>
+            <div class="av-empty">No hay avisos todavía.</div>
+        <?php endif; ?>
+    </div>
 </div>
 <?php require __DIR__ . '/../includes/footer.php'; ?>
