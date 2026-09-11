@@ -20,6 +20,28 @@ if (!$curso) {
     redirect('/estudiante/index.php');
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    requireValidCsrf();
+    $action = (string) ($_POST['action'] ?? '');
+
+    if ($action === 'create_comentario') {
+        $contenido = trim((string) ($_POST['contenido'] ?? ''));
+        if ($contenido === '') {
+            setFlash('danger', 'Escriba un comentario.');
+        } else {
+            $ins = $pdo->prepare('INSERT INTO comentarios (curso_id, autor_id, contenido) VALUES (:curso_id, :autor_id, :contenido)');
+            $ins->execute(['curso_id' => $cursoId, 'autor_id' => $estudianteId, 'contenido' => $contenido]);
+            setFlash('success', 'Comentario publicado.');
+        }
+    } elseif ($action === 'delete_comentario') {
+        $comentarioId = (int) ($_POST['comentario_id'] ?? 0);
+        $del = $pdo->prepare('DELETE FROM comentarios WHERE id = :id AND curso_id = :curso_id AND autor_id = :autor_id');
+        $del->execute(['id' => $comentarioId, 'curso_id' => $cursoId, 'autor_id' => $estudianteId]);
+        setFlash('success', 'Comentario eliminado.');
+    }
+    redirect('/estudiante/curso.php?id=' . $cursoId);
+}
+
 $sesiones = $pdo->prepare('SELECT * FROM sesiones WHERE curso_id = :curso_id ORDER BY fecha DESC, hora_inicio DESC');
 $sesiones->execute(['curso_id' => $cursoId]);
 $sesiones = $sesiones->fetchAll();
@@ -54,6 +76,14 @@ $registradas = array_filter($asistencias, fn($a) => $a['asistencia_estado'] !== 
 $presentesOTarde = array_filter($registradas, fn($a) => in_array($a['asistencia_estado'], ['presente', 'tarde'], true));
 $pctAsistencia = count($registradas) > 0 ? round((count($presentesOTarde) / count($registradas)) * 100) : null;
 
+$comentarios = $pdo->prepare(
+    "SELECT co.*, CONCAT(u.nombre, ' ', u.apellidos) AS autor_nombre, u.rol AS autor_rol
+     FROM comentarios co LEFT JOIN usuarios u ON u.id = co.autor_id
+     WHERE co.curso_id = :curso_id ORDER BY co.created_at ASC"
+);
+$comentarios->execute(['curso_id' => $cursoId]);
+$comentarios = $comentarios->fetchAll();
+
 $pageTitle = $curso['nombre'];
 require __DIR__ . '/../includes/header.php';
 ?>
@@ -69,6 +99,7 @@ require __DIR__ . '/../includes/header.php';
         <button type="button" class="av-tab" data-tab-target="tab-materiales">Materiales</button>
         <button type="button" class="av-tab" data-tab-target="tab-tareas">Tareas</button>
         <button type="button" class="av-tab" data-tab-target="tab-asistencia">Mi asistencia</button>
+        <button type="button" class="av-tab" data-tab-target="tab-comentarios">Comentarios</button>
     </div>
 
     <!-- SESIONES -->
@@ -195,6 +226,41 @@ require __DIR__ . '/../includes/header.php';
                 </tbody>
             </table>
         </div>
+    </div>
+
+    <!-- COMENTARIOS -->
+    <div class="av-tabpanel" id="tab-comentarios">
+        <div class="av-comments">
+            <?php foreach ($comentarios as $c): ?>
+                <div class="av-comment">
+                    <div class="av-comment__body">
+                        <div class="av-comment__meta">
+                            <strong><?= e($c['autor_nombre'] ?? 'Usuario eliminado') ?></strong>
+                            <?php if ($c['autor_rol']): ?><span class="av-badge av-badge--gray"><?= e($c['autor_rol']) ?></span><?php endif; ?>
+                            <span class="av-text-muted"><?= formatDateEs($c['created_at']) ?></span>
+                        </div>
+                        <p><?= nl2br(e($c['contenido'])) ?></p>
+                    </div>
+                    <?php if ((int) $c['autor_id'] === $estudianteId): ?>
+                        <form method="post" onsubmit="return confirm('¿Eliminar este comentario?');">
+                            <?= csrfField() ?>
+                            <input type="hidden" name="action" value="delete_comentario">
+                            <input type="hidden" name="comentario_id" value="<?= (int) $c['id'] ?>">
+                            <button class="av-btn av-btn--danger av-btn--sm" type="submit">Eliminar</button>
+                        </form>
+                    <?php endif; ?>
+                </div>
+            <?php endforeach; ?>
+            <?php if (!$comentarios): ?>
+                <div class="av-empty">Sin comentarios todavía. Sé el primero en escribir.</div>
+            <?php endif; ?>
+        </div>
+        <form method="post" class="av-card" style="margin-top:16px">
+            <?= csrfField() ?>
+            <input type="hidden" name="action" value="create_comentario">
+            <div class="av-fg"><textarea name="contenido" rows="3" placeholder="Escribe un comentario para el curso..." required></textarea></div>
+            <button class="av-btn av-btn--primary" type="submit">Comentar</button>
+        </form>
     </div>
 </div>
 <?php require __DIR__ . '/../includes/footer.php'; ?>
