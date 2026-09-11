@@ -1,0 +1,3 @@
+# Bloquea el acceso directo a los archivos subidos. Todo acceso debe
+# pasar por download.php, que valida permisos por rol.
+Require all denied

@@ -1,0 +1,38 @@
+services:
+  web:
+    image: php-apache-custom
+    container_name: aulavirtual-web
+    restart: unless-stopped
+    volumes:
+      - /opt/sites/aulavirtual.iestpbf.edu.pe/public_html:/var/www/html
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.aulavirtual.rule=Host(`aulavirtual.iestpbf.edu.pe`)"
+      - "traefik.http.routers.aulavirtual.entrypoints=websecure"
+      - "traefik.http.routers.aulavirtual.tls=true"
+      - "traefik.http.routers.aulavirtual.tls.certresolver=mytlschallenge"
+      - "traefik.http.services.aulavirtual.loadbalancer.server.port=80"
+    networks:
+      - traefik
+    depends_on:
+      - db
+  db:
+    image: mariadb:10.11
+    container_name: aulavirtual-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: 8aPPwLpuYT3cgZrNBtFKDiNx
+      MYSQL_DATABASE: aulavirtual
+      MYSQL_USER: aulavirtual
+      MYSQL_PASSWORD: qjWiBhv8vNi28334sNdG94Ei
+    volumes:
+      - aulavirtual_db_data:/var/lib/mysql
+      - ./db.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    networks:
+      - traefik
+networks:
+  traefik:
+    external: true
+    name: n8n_default
+volumes:
+  aulavirtual_db_data:
