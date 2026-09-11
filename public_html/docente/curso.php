@@ -164,6 +164,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $del = $pdo->prepare('DELETE FROM avisos WHERE id = :id AND curso_id = :curso_id');
         $del->execute(['id' => $avisoId, 'curso_id' => $cursoId]);
         setFlash('success', 'Aviso eliminado.');
+    } elseif ($action === 'create_comentario') {
+        $contenido = trim((string) ($_POST['contenido'] ?? ''));
+        if ($contenido === '') {
+            setFlash('danger', 'Escriba un comentario.');
+        } else {
+            $ins = $pdo->prepare('INSERT INTO comentarios (curso_id, autor_id, contenido) VALUES (:curso_id, :autor_id, :contenido)');
+            $ins->execute(['curso_id' => $cursoId, 'autor_id' => $docenteId, 'contenido' => $contenido]);
+            setFlash('success', 'Comentario publicado.');
+        }
+    } elseif ($action === 'delete_comentario') {
+        $comentarioId = (int) ($_POST['comentario_id'] ?? 0);
+        $del = $pdo->prepare('DELETE FROM comentarios WHERE id = :id AND curso_id = :curso_id');
+        $del->execute(['id' => $comentarioId, 'curso_id' => $cursoId]);
+        setFlash('success', 'Comentario eliminado.');
     }
 
     redirect('/docente/curso.php?id=' . $cursoId);
@@ -211,6 +225,14 @@ $avisos = $pdo->prepare('SELECT * FROM avisos WHERE curso_id = :curso_id ORDER B
 $avisos->execute(['curso_id' => $cursoId]);
 $avisos = $avisos->fetchAll();
 
+$comentarios = $pdo->prepare(
+    "SELECT co.*, CONCAT(u.nombre, ' ', u.apellidos) AS autor_nombre, u.rol AS autor_rol
+     FROM comentarios co LEFT JOIN usuarios u ON u.id = co.autor_id
+     WHERE co.curso_id = :curso_id ORDER BY co.created_at ASC"
+);
+$comentarios->execute(['curso_id' => $cursoId]);
+$comentarios = $comentarios->fetchAll();
+
 $pageTitle = $curso['nombre'];
 require __DIR__ . '/../includes/header.php';
 ?>
@@ -227,6 +249,7 @@ require __DIR__ . '/../includes/header.php';
         <button type="button" class="av-tab" data-tab-target="tab-tareas">Tareas</button>
         <button type="button" class="av-tab" data-tab-target="tab-asistencia">Asistencia</button>
         <button type="button" class="av-tab" data-tab-target="tab-avisos">Avisos</button>
+        <button type="button" class="av-tab" data-tab-target="tab-comentarios">Comentarios</button>
     </div>
 
     <!-- SESIONES -->
@@ -505,6 +528,41 @@ require __DIR__ . '/../includes/header.php';
                 <div class="av-empty">Sin avisos publicados en este curso.</div>
             <?php endif; ?>
         </div>
+    </div>
+
+    <!-- COMENTARIOS -->
+    <div class="av-tabpanel" id="tab-comentarios">
+        <div class="av-comments">
+            <?php foreach ($comentarios as $c): ?>
+                <div class="av-comment">
+                    <div class="av-comment__body">
+                        <div class="av-comment__meta">
+                            <strong><?= e($c['autor_nombre'] ?? 'Usuario eliminado') ?></strong>
+                            <?php if ($c['autor_rol']): ?><span class="av-badge av-badge--gray"><?= e($c['autor_rol']) ?></span><?php endif; ?>
+                            <span class="av-text-muted"><?= formatDateEs($c['created_at']) ?></span>
+                        </div>
+                        <p><?= nl2br(e($c['contenido'])) ?></p>
+                    </div>
+                    <form method="post" onsubmit="return confirm('¿Eliminar este comentario?');">
+                        <?= csrfField() ?>
+                        <input type="hidden" name="action" value="delete_comentario">
+                        <input type="hidden" name="curso_id" value="<?= $cursoId ?>">
+                        <input type="hidden" name="comentario_id" value="<?= (int) $c['id'] ?>">
+                        <button class="av-btn av-btn--danger av-btn--sm" type="submit">Eliminar</button>
+                    </form>
+                </div>
+            <?php endforeach; ?>
+            <?php if (!$comentarios): ?>
+                <div class="av-empty">Sin comentarios todavía. Sé el primero en escribir.</div>
+            <?php endif; ?>
+        </div>
+        <form method="post" class="av-card" style="margin-top:16px">
+            <?= csrfField() ?>
+            <input type="hidden" name="action" value="create_comentario">
+            <input type="hidden" name="curso_id" value="<?= $cursoId ?>">
+            <div class="av-fg"><textarea name="contenido" rows="3" placeholder="Escribe un comentario para el curso..." required></textarea></div>
+            <button class="av-btn av-btn--primary" type="submit">Comentar</button>
+        </form>
     </div>
 </div>
 

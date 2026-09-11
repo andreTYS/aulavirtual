@@ -44,12 +44,15 @@ function navActive(string $path): string
                 <a class="av-nav__item<?= navActive('/admin/carreras.php') ?>" href="/admin/carreras.php"><?= avIcon('graduation') ?> Carreras</a>
                 <a class="av-nav__item<?= navActive('/admin/periodos.php') ?>" href="/admin/periodos.php"><?= avIcon('calendar') ?> Periodos académicos</a>
                 <a class="av-nav__item<?= navActive('/admin/avisos.php') ?>" href="/admin/avisos.php"><?= avIcon('megaphone') ?> Avisos</a>
+                <a class="av-nav__item<?= navActive('/admin/demo_data.php') ?>" href="/admin/demo_data.php"><?= avIcon('star') ?> Datos de demostración</a>
             <?php elseif ($user['rol'] === 'docente'): ?>
                 <div class="av-nav__group">Docencia</div>
                 <a class="av-nav__item<?= navActive('/docente/index.php') ?>" href="/docente/index.php"><?= avIcon('book') ?> Mis cursos</a>
+                <a class="av-nav__item<?= navActive('/docente/calendario.php') ?>" href="/docente/calendario.php"><?= avIcon('calendar') ?> Calendario</a>
             <?php elseif ($user['rol'] === 'estudiante'): ?>
                 <div class="av-nav__group">Aprendizaje</div>
                 <a class="av-nav__item<?= navActive('/estudiante/index.php') ?>" href="/estudiante/index.php"><?= avIcon('book') ?> Mis cursos</a>
+                <a class="av-nav__item<?= navActive('/estudiante/calendario.php') ?>" href="/estudiante/calendario.php"><?= avIcon('calendar') ?> Calendario</a>
                 <a class="av-nav__item<?= navActive('/estudiante/calificaciones.php') ?>" href="/estudiante/calificaciones.php"><?= avIcon('star') ?> Calificaciones</a>
             <?php endif; ?>
         </nav>

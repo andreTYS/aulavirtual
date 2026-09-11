@@ -269,6 +269,35 @@ img{max-width:100%}
 .av-empty{padding:32px;text-align:center;color:var(--n400);font-size:.85rem}
 
 /* ══════════════════════════════════════
+   COMMENTS (comentarios de curso)
+══════════════════════════════════════ */
+.av-comments{display:flex;flex-direction:column;gap:10px}
+.av-comment{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;background:var(--white);border:1px solid var(--n200);border-radius:var(--radius);padding:14px 16px}
+.av-comment__meta{display:flex;align-items:center;gap:8px;font-size:.8rem;margin-bottom:4px}
+.av-comment__body p{font-size:.88rem;color:var(--n800);white-space:pre-wrap}
+
+/* ══════════════════════════════════════
+   CALENDAR (vista mensual)
+══════════════════════════════════════ */
+.av-cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.av-cal-head h3{font-size:1.05rem;font-weight:800;color:var(--n900);text-transform:capitalize}
+.av-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--n200);border:1px solid var(--n200);border-radius:var(--radius);overflow:hidden}
+.av-cal-dow{background:var(--n100);padding:8px;text-align:center;font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--n500)}
+.av-cal-day{background:var(--white);min-height:96px;padding:6px;display:flex;flex-direction:column;gap:3px}
+.av-cal-day.is-empty{background:var(--n100)}
+.av-cal-day.is-today{background:#eff6ff}
+.av-cal-day__num{font-size:.75rem;font-weight:700;color:var(--n600);margin-bottom:2px}
+.av-cal-day.is-today .av-cal-day__num{color:var(--ab700)}
+.av-cal-pill{font-size:.66rem;font-weight:700;padding:2px 6px;border-radius:5px;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.av-cal-pill--sesion{background:var(--ab100);color:var(--ab700)}
+.av-cal-pill--tarea{background:var(--ag100);color:var(--ag700)}
+@media(max-width:700px){
+  .av-cal-dow{font-size:.58rem;padding:5px 2px}
+  .av-cal-day{min-height:60px;padding:3px}
+  .av-cal-pill{font-size:.58rem}
+}
+
+/* ══════════════════════════════════════
    MISC
 ══════════════════════════════════════ */
 .av-grade-box{background:var(--success-lt);border-radius:var(--radius);padding:16px 18px;color:#166534;font-size:.88rem}
