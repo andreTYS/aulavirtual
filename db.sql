@@ -194,6 +194,24 @@ CREATE TABLE IF NOT EXISTS asistencias (
     CONSTRAINT fk_asistencias_estudiante FOREIGN KEY (estudiante_id) REFERENCES usuarios(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ------------------------------------------------------------
+-- avisos: muro de anuncios. curso_id NULL = aviso general para
+-- todo el instituto (solo administrador); con curso_id = aviso de
+-- ese curso, visible para su docente y sus estudiantes matriculados.
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS avisos (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    autor_id INT UNSIGNED NULL,
+    curso_id INT UNSIGNED NULL,
+    titulo VARCHAR(200) NOT NULL,
+    contenido TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_avisos_autor FOREIGN KEY (autor_id) REFERENCES usuarios(id) ON DELETE SET NULL,
+    CONSTRAINT fk_avisos_curso FOREIGN KEY (curso_id) REFERENCES cursos(id) ON DELETE CASCADE,
+    KEY idx_avisos_curso (curso_id),
+    KEY idx_avisos_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ============================================================

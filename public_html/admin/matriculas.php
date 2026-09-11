@@ -74,6 +74,7 @@ require __DIR__ . '/../includes/header.php';
 ?>
 <div class="av-page-header">
     <h2>Matrículas: <?= e($curso['nombre']) ?></h2>
+    <a href="/admin/export_matriculas.php?curso_id=<?= $cursoId ?>" class="av-btn av-btn--outline"><?= avIcon('download') ?> Exportar CSV</a>
     <a href="/admin/cursos.php" class="av-btn av-btn--outline">&larr; Volver a cursos</a>
 </div>
 

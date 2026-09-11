@@ -149,6 +149,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $del = $pdo->prepare('DELETE FROM tareas WHERE id = :id AND curso_id = :curso_id');
         $del->execute(['id' => $tareaId, 'curso_id' => $cursoId]);
         setFlash('success', 'Tarea eliminada.');
+    } elseif ($action === 'create_aviso') {
+        $titulo = trim((string) ($_POST['titulo'] ?? ''));
+        $contenido = trim((string) ($_POST['contenido'] ?? ''));
+        if ($titulo === '' || $contenido === '') {
+            setFlash('danger', 'Complete el título y el contenido del aviso.');
+        } else {
+            $ins = $pdo->prepare('INSERT INTO avisos (autor_id, curso_id, titulo, contenido) VALUES (:autor_id, :curso_id, :titulo, :contenido)');
+            $ins->execute(['autor_id' => $docenteId, 'curso_id' => $cursoId, 'titulo' => $titulo, 'contenido' => $contenido]);
+            setFlash('success', 'Aviso publicado para los estudiantes del curso.');
+        }
+    } elseif ($action === 'delete_aviso') {
+        $avisoId = (int) ($_POST['aviso_id'] ?? 0);
+        $del = $pdo->prepare('DELETE FROM avisos WHERE id = :id AND curso_id = :curso_id');
+        $del->execute(['id' => $avisoId, 'curso_id' => $cursoId]);
+        setFlash('success', 'Aviso eliminado.');
     }
 
     redirect('/docente/curso.php?id=' . $cursoId);
@@ -192,6 +207,10 @@ $asistenciaResumen = $pdo->prepare(
 $asistenciaResumen->execute(['curso_id' => $cursoId]);
 $asistenciaResumen = $asistenciaResumen->fetchAll();
 
+$avisos = $pdo->prepare('SELECT * FROM avisos WHERE curso_id = :curso_id ORDER BY created_at DESC');
+$avisos->execute(['curso_id' => $cursoId]);
+$avisos = $avisos->fetchAll();
+
 $pageTitle = $curso['nombre'];
 require __DIR__ . '/../includes/header.php';
 ?>
@@ -207,6 +226,7 @@ require __DIR__ . '/../includes/header.php';
         <button type="button" class="av-tab" data-tab-target="tab-materiales">Materiales</button>
         <button type="button" class="av-tab" data-tab-target="tab-tareas">Tareas</button>
         <button type="button" class="av-tab" data-tab-target="tab-asistencia">Asistencia</button>
+        <button type="button" class="av-tab" data-tab-target="tab-avisos">Avisos</button>
     </div>
 
     <!-- SESIONES -->
@@ -415,6 +435,9 @@ require __DIR__ . '/../includes/header.php';
 
     <!-- ASISTENCIA -->
     <div class="av-tabpanel" id="tab-asistencia">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+            <a href="/docente/export_asistencia.php?curso_id=<?= $cursoId ?>" class="av-btn av-btn--outline av-btn--sm"><?= avIcon('download') ?> Exportar CSV</a>
+        </div>
         <div class="av-table-wrap">
             <table class="av-table">
                 <thead><tr><th>Estudiante</th><th>Sesiones registradas</th><th>Presente</th><th>Tarde</th><th>Falta</th><th>Justificado</th><th>% Asistencia</th></tr></thead>
@@ -445,6 +468,42 @@ require __DIR__ . '/../includes/header.php';
                 <?php endif; ?>
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <!-- AVISOS -->
+    <div class="av-tabpanel" id="tab-avisos">
+        <div class="av-card" style="margin-bottom:16px">
+            <h3>+ Nuevo aviso para este curso</h3>
+            <form method="post">
+                <?= csrfField() ?>
+                <input type="hidden" name="action" value="create_aviso">
+                <input type="hidden" name="curso_id" value="<?= $cursoId ?>">
+                <div class="av-fg"><label>Título</label><input type="text" name="titulo" required></div>
+                <div class="av-fg"><label>Contenido</label><textarea name="contenido" rows="3" required></textarea></div>
+                <button class="av-btn av-btn--primary" type="submit"><?= avIcon('megaphone') ?> Publicar aviso</button>
+            </form>
+        </div>
+        <div class="av-list">
+            <?php foreach ($avisos as $a): ?>
+                <div class="av-list-item">
+                    <div>
+                        <div class="content-title"><?= e($a['titulo']) ?></div>
+                        <div class="content-desc"><?= nl2br(e($a['contenido'])) ?></div>
+                        <div class="content-desc" style="margin-top:4px"><?= formatDateEs($a['created_at']) ?></div>
+                    </div>
+                    <form method="post" onsubmit="return confirm('¿Eliminar este aviso?');">
+                        <?= csrfField() ?>
+                        <input type="hidden" name="action" value="delete_aviso">
+                        <input type="hidden" name="curso_id" value="<?= $cursoId ?>">
+                        <input type="hidden" name="aviso_id" value="<?= (int) $a['id'] ?>">
+                        <button class="av-btn av-btn--danger av-btn--sm" type="submit">Eliminar</button>
+                    </form>
+                </div>
+            <?php endforeach; ?>
+            <?php if (!$avisos): ?>
+                <div class="av-empty">Sin avisos publicados en este curso.</div>
+            <?php endif; ?>
         </div>
     </div>
 </div>
