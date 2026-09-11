@@ -60,56 +60,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $pageTitle = $tarea['titulo'];
 require __DIR__ . '/../includes/header.php';
 ?>
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="av-page-header">
     <h2><?= e($tarea['titulo']) ?></h2>
-    <a href="/estudiante/curso.php?id=<?= (int) $tarea['curso_id'] ?>" class="btn btn-outline-secondary">&larr; <?= e($tarea['curso_nombre']) ?></a>
+    <a href="/estudiante/curso.php?id=<?= (int) $tarea['curso_id'] ?>" class="av-btn av-btn--outline">&larr; <?= e($tarea['curso_nombre']) ?></a>
 </div>
 
-<div class="card mb-4">
-    <div class="card-body">
-        <p><strong>Fecha límite:</strong> <?= formatDateEs($tarea['fecha_limite']) ?>
-            <?php if (isPastDue($tarea['fecha_limite'])): ?><span class="badge bg-danger ms-1">Vencida</span><?php endif; ?>
-        </p>
-        <p><?= nl2br(e($tarea['descripcion'] ?? '')) ?></p>
-    </div>
+<div class="av-card">
+    <p><strong>Fecha límite:</strong> <?= formatDateEs($tarea['fecha_limite']) ?>
+        <?php if (isPastDue($tarea['fecha_limite'])): ?><span class="av-badge av-badge--red">Vencida</span><?php endif; ?>
+    </p>
+    <p style="margin-top:10px"><?= nl2br(e($tarea['descripcion'] ?? '')) ?></p>
 </div>
 
 <?php if ($errors): ?>
-    <div class="alert alert-danger">
-        <ul class="mb-0"><?php foreach ($errors as $err): ?><li><?= e($err) ?></li><?php endforeach; ?></ul>
+    <div class="av-alert av-alert--danger">
+        <span><?php foreach ($errors as $err): ?><?= e($err) ?><br><?php endforeach; ?></span>
     </div>
 <?php endif; ?>
 
-<div class="card">
-    <div class="card-header">Mi entrega</div>
-    <div class="card-body">
-        <?php if ($entrega): ?>
-            <p>Entregado el <?= formatDateEs($entrega['fecha_entrega']) ?> &middot;
-                <a href="/download.php?type=entrega&id=<?= (int) $entrega['id'] ?>">Descargar mi archivo</a></p>
-            <?php if ($entrega['calificacion'] !== null): ?>
-                <div class="alert alert-success">
-                    <strong>Calificación: <?= e((string) $entrega['calificacion']) ?> / 20</strong><br>
-                    <?php if ($entrega['comentario']): ?>
-                        Comentario del docente: <?= nl2br(e($entrega['comentario'])) ?>
-                    <?php endif; ?>
-                </div>
-            <?php else: ?>
-                <p class="text-muted">Aún no calificada. Puede reemplazar el archivo mientras no haya calificación.</p>
-                <form method="post" enctype="multipart/form-data">
-                    <?= csrfField() ?>
-                    <input type="hidden" name="tarea_id" value="<?= $tareaId ?>">
-                    <div class="mb-3"><input type="file" name="archivo" class="form-control" required></div>
-                    <button type="submit" class="btn btn-primary">Reemplazar entrega</button>
-                </form>
-            <?php endif; ?>
+<div class="av-card">
+    <h3>Mi entrega</h3>
+    <?php if ($entrega): ?>
+        <p>Entregado el <?= formatDateEs($entrega['fecha_entrega']) ?> &middot;
+            <a href="/download.php?type=entrega&id=<?= (int) $entrega['id'] ?>" style="color:var(--ab600);font-weight:600">Descargar mi archivo</a></p>
+        <?php if ($entrega['calificacion'] !== null): ?>
+            <div class="av-grade-box" style="margin-top:12px">
+                <strong>Calificación: <?= e((string) $entrega['calificacion']) ?> / 20</strong><br>
+                <?php if ($entrega['comentario']): ?>
+                    Comentario del docente: <?= nl2br(e($entrega['comentario'])) ?>
+                <?php endif; ?>
+            </div>
         <?php else: ?>
+            <p class="av-text-muted" style="margin:10px 0">Aún no calificada. Puede reemplazar el archivo mientras no haya calificación.</p>
             <form method="post" enctype="multipart/form-data">
                 <?= csrfField() ?>
                 <input type="hidden" name="tarea_id" value="<?= $tareaId ?>">
-                <div class="mb-3"><input type="file" name="archivo" class="form-control" required></div>
-                <button type="submit" class="btn btn-primary">Entregar tarea</button>
+                <div class="av-fg"><input type="file" name="archivo" required></div>
+                <button type="submit" class="av-btn av-btn--primary">Reemplazar entrega</button>
             </form>
         <?php endif; ?>
-    </div>
+    <?php else: ?>
+        <form method="post" enctype="multipart/form-data">
+            <?= csrfField() ?>
+            <input type="hidden" name="tarea_id" value="<?= $tareaId ?>">
+            <div class="av-fg"><input type="file" name="archivo" required></div>
+            <button type="submit" class="av-btn av-btn--primary">Entregar tarea</button>
+        </form>
+    <?php endif; ?>
 </div>
 <?php require __DIR__ . '/../includes/footer.php'; ?>

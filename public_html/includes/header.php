@@ -1,12 +1,18 @@
 <?php
 /**
  * Cabecera comun HTML. Espera opcionalmente $pageTitle definido antes
- * de incluir este archivo.
+ * de incluir este archivo. Usa el mismo sistema de diseno que el
+ * panel administrativo institucional (sidebar oscuro, Plus Jakarta Sans).
  */
 declare(strict_types=1);
 
 $user = currentUser();
 $pageTitle = $pageTitle ?? APP_NAME;
+
+function navActive(string $path): string
+{
+    return str_ends_with($_SERVER['SCRIPT_NAME'], $path) ? ' active' : '';
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -14,49 +20,59 @@ $pageTitle = $pageTitle ?? APP_NAME;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= e($pageTitle) ?></title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body { background-color: #f5f6f8; }
-        .navbar-brand { font-weight: 600; }
-        .card { border: none; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
-        footer { color: #888; font-size: .85rem; }
-    </style>
+    <link rel="icon" href="/assets/img/logo.svg" type="image/svg+xml">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="/assets/css/aula.css" rel="stylesheet">
 </head>
 <body>
 <?php if ($user): ?>
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="<?= e(dashboardUrlForRole($user['rol'])) ?>">Aula Virtual IESTP-BF</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navMenu">
-            <ul class="navbar-nav me-auto">
-                <?php if ($user['rol'] === 'administrador'): ?>
-                    <li class="nav-item"><a class="nav-link" href="/admin/index.php">Panel</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/admin/usuarios.php">Usuarios</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/admin/cursos.php">Cursos</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/admin/carreras.php">Carreras</a></li>
-                <?php elseif ($user['rol'] === 'docente'): ?>
-                    <li class="nav-item"><a class="nav-link" href="/docente/index.php">Mis cursos</a></li>
-                <?php elseif ($user['rol'] === 'estudiante'): ?>
-                    <li class="nav-item"><a class="nav-link" href="/estudiante/index.php">Mis cursos</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/estudiante/calificaciones.php">Calificaciones</a></li>
-                <?php endif; ?>
-            </ul>
-            <span class="navbar-text text-light me-3">
-                <?= e($user['nombre'] . ' ' . $user['apellidos']) ?>
-                <span class="badge bg-secondary text-uppercase"><?= e($user['rol']) ?></span>
-            </span>
-            <a href="/logout.php" class="btn btn-outline-light btn-sm">Cerrar sesión</a>
+<div class="av-shell">
+    <aside class="av-sidebar">
+        <div class="av-sidebar__brand">
+            <img src="/assets/img/logo.svg" alt="IESTPBF">
+            <div class="av-sidebar__brand-text">
+                <span>Aula Virtual</span>
+                <small>IESTP Benjamín Franklin</small>
+            </div>
         </div>
-    </div>
-</nav>
-<?php endif; ?>
-<div class="container pb-5">
+        <nav class="av-nav">
+            <?php if ($user['rol'] === 'administrador'): ?>
+                <div class="av-nav__group">Gestión</div>
+                <a class="av-nav__item<?= navActive('/admin/index.php') ?>" href="/admin/index.php">Panel</a>
+                <a class="av-nav__item<?= navActive('/admin/usuarios.php') . navActive('/admin/usuario_form.php') ?>" href="/admin/usuarios.php">Usuarios</a>
+                <a class="av-nav__item<?= navActive('/admin/cursos.php') . navActive('/admin/curso_form.php') . navActive('/admin/matriculas.php') ?>" href="/admin/cursos.php">Cursos</a>
+                <a class="av-nav__item<?= navActive('/admin/carreras.php') ?>" href="/admin/carreras.php">Carreras</a>
+            <?php elseif ($user['rol'] === 'docente'): ?>
+                <div class="av-nav__group">Docencia</div>
+                <a class="av-nav__item<?= navActive('/docente/index.php') ?>" href="/docente/index.php">Mis cursos</a>
+            <?php elseif ($user['rol'] === 'estudiante'): ?>
+                <div class="av-nav__group">Aprendizaje</div>
+                <a class="av-nav__item<?= navActive('/estudiante/index.php') ?>" href="/estudiante/index.php">Mis cursos</a>
+                <a class="av-nav__item<?= navActive('/estudiante/calificaciones.php') ?>" href="/estudiante/calificaciones.php">Calificaciones</a>
+            <?php endif; ?>
+        </nav>
+        <div class="av-sidebar__footer">
+            <a href="/logout.php" class="av-btn av-btn--white-ghost av-btn--sm av-btn--block">Cerrar sesión</a>
+        </div>
+    </aside>
+    <div class="av-main">
+        <header class="av-topbar">
+            <span class="av-topbar__title"><?= e($pageTitle) ?></span>
+            <span class="av-topbar__meta"><?= e($user['nombre'] . ' ' . $user['apellidos']) ?></span>
+            <span class="av-topbar__status"><?= e($user['rol']) ?></span>
+        </header>
+        <div class="av-main__content">
+            <?php foreach (getFlashes() as $flash): ?>
+                <div class="av-alert av-alert--<?= $flash['type'] === 'danger' ? 'danger' : 'success' ?>">
+                    <span><?= e($flash['message']) ?></span>
+                    <button type="button" class="av-alert__close" onclick="this.parentElement.remove()">&times;</button>
+                </div>
+            <?php endforeach; ?>
+<?php else: ?>
     <?php foreach (getFlashes() as $flash): ?>
-        <div class="alert alert-<?= e($flash['type']) ?> alert-dismissible fade show" role="alert">
-            <?= e($flash['message']) ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <div class="av-alert av-alert--<?= $flash['type'] === 'danger' ? 'danger' : 'success' ?>" style="max-width:390px;margin:16px auto 0">
+            <span><?= e($flash['message']) ?></span>
+            <button type="button" class="av-alert__close" onclick="this.parentElement.remove()">&times;</button>
         </div>
     <?php endforeach; ?>
+<?php endif; ?>

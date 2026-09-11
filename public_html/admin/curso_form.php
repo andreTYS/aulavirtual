@@ -70,62 +70,59 @@ $docentes = $pdo->query("SELECT id, nombre, apellidos FROM usuarios WHERE rol = 
 $pageTitle = $editing ? 'Editar curso' : 'Nuevo curso';
 require __DIR__ . '/../includes/header.php';
 ?>
-<h2 class="mb-4"><?= e($pageTitle) ?></h2>
+<div class="av-page-header"><h2><?= e($pageTitle) ?></h2></div>
 
 <?php if ($errors): ?>
-    <div class="alert alert-danger">
-        <ul class="mb-0"><?php foreach ($errors as $err): ?><li><?= e($err) ?></li><?php endforeach; ?></ul>
+    <div class="av-alert av-alert--danger">
+        <span><?php foreach ($errors as $err): ?><?= e($err) ?><br><?php endforeach; ?></span>
     </div>
 <?php endif; ?>
 
-<div class="card">
-    <div class="card-body">
-        <form method="post" novalidate>
-            <?= csrfField() ?>
-            <?php if ($editing): ?><input type="hidden" name="id" value="<?= $id ?>"><?php endif; ?>
-            <div class="row g-3">
-                <div class="col-12">
-                    <label class="form-label">Nombre del curso</label>
-                    <input type="text" name="nombre" class="form-control" value="<?= e($curso['nombre']) ?>" required>
-                </div>
-                <div class="col-12">
-                    <label class="form-label">Descripción</label>
-                    <textarea name="descripcion" class="form-control" rows="3"><?= e($curso['descripcion']) ?></textarea>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Carrera</label>
-                    <select name="carrera_id" class="form-select" required>
-                        <option value="">-- Seleccionar --</option>
-                        <?php foreach ($carreras as $car): ?>
-                            <option value="<?= (int) $car['id'] ?>" <?= (int) $curso['carrera_id'] === (int) $car['id'] ? 'selected' : '' ?>>
-                                <?= e($car['nombre']) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Docente asignado</label>
-                    <select name="docente_id" class="form-select">
-                        <option value="">Sin asignar</option>
-                        <?php foreach ($docentes as $doc): ?>
-                            <option value="<?= (int) $doc['id'] ?>" <?= (int) ($curso['docente_id'] ?? 0) === (int) $doc['id'] ? 'selected' : '' ?>>
-                                <?= e($doc['nombre'] . ' ' . $doc['apellidos']) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="col-12">
-                    <div class="form-check">
-                        <input type="checkbox" name="activo" class="form-check-input" id="activo" <?= $curso['activo'] ? 'checked' : '' ?>>
-                        <label class="form-check-label" for="activo">Curso activo</label>
-                    </div>
-                </div>
+<div class="av-card" style="max-width:720px">
+    <form method="post" novalidate>
+        <?= csrfField() ?>
+        <?php if ($editing): ?><input type="hidden" name="id" value="<?= $id ?>"><?php endif; ?>
+        <div class="av-fg">
+            <label>Nombre del curso</label>
+            <input type="text" name="nombre" value="<?= e($curso['nombre']) ?>" required>
+        </div>
+        <div class="av-fg">
+            <label>Descripción</label>
+            <textarea name="descripcion" rows="3"><?= e($curso['descripcion']) ?></textarea>
+        </div>
+        <div class="av-form-grid">
+            <div class="av-fg">
+                <label>Carrera</label>
+                <select name="carrera_id" required>
+                    <option value="">-- Seleccionar --</option>
+                    <?php foreach ($carreras as $car): ?>
+                        <option value="<?= (int) $car['id'] ?>" <?= (int) $curso['carrera_id'] === (int) $car['id'] ? 'selected' : '' ?>>
+                            <?= e($car['nombre']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
             </div>
-            <div class="mt-4">
-                <button type="submit" class="btn btn-primary">Guardar</button>
-                <a href="/admin/cursos.php" class="btn btn-outline-secondary">Cancelar</a>
+            <div class="av-fg">
+                <label>Docente asignado</label>
+                <select name="docente_id">
+                    <option value="">Sin asignar</option>
+                    <?php foreach ($docentes as $doc): ?>
+                        <option value="<?= (int) $doc['id'] ?>" <?= (int) ($curso['docente_id'] ?? 0) === (int) $doc['id'] ? 'selected' : '' ?>>
+                            <?= e($doc['nombre'] . ' ' . $doc['apellidos']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
             </div>
-        </form>
-    </div>
+        </div>
+        <div class="av-fg">
+            <label style="text-transform:none;font-weight:600">
+                <input type="checkbox" name="activo" <?= $curso['activo'] ? 'checked' : '' ?>> Curso activo
+            </label>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:10px">
+            <button type="submit" class="av-btn av-btn--primary">Guardar</button>
+            <a href="/admin/cursos.php" class="av-btn av-btn--outline">Cancelar</a>
+        </div>
+    </form>
 </div>
 <?php require __DIR__ . '/../includes/footer.php'; ?>

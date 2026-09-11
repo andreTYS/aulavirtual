@@ -40,47 +40,42 @@ $carreras = $pdo->query('SELECT c.*, (SELECT COUNT(*) FROM cursos WHERE carrera_
 $pageTitle = 'Carreras';
 require __DIR__ . '/../includes/header.php';
 ?>
-<h2 class="mb-4">Carreras</h2>
+<div class="av-page-header"><h2>Carreras</h2></div>
 
-<div class="card mb-4">
-    <div class="card-body">
-        <form method="post" class="row g-2">
-            <?= csrfField() ?>
-            <input type="hidden" name="action" value="create">
-            <div class="col-md-8">
-                <input type="text" name="nombre" class="form-control" placeholder="Nombre de la carrera" required>
-            </div>
-            <div class="col-md-4">
-                <button type="submit" class="btn btn-primary w-100">+ Agregar carrera</button>
-            </div>
-        </form>
-    </div>
+<div class="av-card" style="margin-bottom:20px">
+    <form method="post" class="av-inline-form">
+        <?= csrfField() ?>
+        <input type="hidden" name="action" value="create">
+        <div class="av-fg">
+            <label>Nueva carrera</label>
+            <input type="text" name="nombre" placeholder="Nombre de la carrera" required>
+        </div>
+        <button type="submit" class="av-btn av-btn--primary">+ Agregar</button>
+    </form>
 </div>
 
-<div class="card">
-    <div class="table-responsive">
-        <table class="table table-hover mb-0 align-middle">
-            <thead class="table-light"><tr><th>Carrera</th><th>Cursos</th><th class="text-end">Acciones</th></tr></thead>
-            <tbody>
-            <?php foreach ($carreras as $c): ?>
-                <tr>
-                    <td><?= e($c['nombre']) ?></td>
-                    <td><?= (int) $c['total_cursos'] ?></td>
-                    <td class="text-end">
-                        <form method="post" class="d-inline" onsubmit="return confirm('¿Eliminar esta carrera?');">
-                            <?= csrfField() ?>
-                            <input type="hidden" name="action" value="delete">
-                            <input type="hidden" name="id" value="<?= (int) $c['id'] ?>">
-                            <button class="btn btn-sm btn-outline-danger" type="submit">Eliminar</button>
-                        </form>
-                    </td>
-                </tr>
-            <?php endforeach; ?>
-            <?php if (!$carreras): ?>
-                <tr><td colspan="3" class="text-center text-muted py-4">No hay carreras registradas.</td></tr>
-            <?php endif; ?>
-            </tbody>
-        </table>
-    </div>
+<div class="av-table-wrap">
+    <table class="av-table">
+        <thead><tr><th>Carrera</th><th>Cursos</th><th></th></tr></thead>
+        <tbody>
+        <?php foreach ($carreras as $c): ?>
+            <tr>
+                <td><strong><?= e($c['nombre']) ?></strong></td>
+                <td><?= (int) $c['total_cursos'] ?></td>
+                <td class="av-td-actions">
+                    <form method="post" onsubmit="return confirm('¿Eliminar esta carrera?');">
+                        <?= csrfField() ?>
+                        <input type="hidden" name="action" value="delete">
+                        <input type="hidden" name="id" value="<?= (int) $c['id'] ?>">
+                        <button class="av-btn av-btn--danger av-btn--sm" type="submit">Eliminar</button>
+                    </form>
+                </td>
+            </tr>
+        <?php endforeach; ?>
+        <?php if (!$carreras): ?>
+            <tr><td colspan="3" class="av-empty">No hay carreras registradas.</td></tr>
+        <?php endif; ?>
+        </tbody>
+    </table>
 </div>
 <?php require __DIR__ . '/../includes/footer.php'; ?>

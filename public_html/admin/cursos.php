@@ -27,45 +27,43 @@ $cursos = $pdo->query(
 $pageTitle = 'Cursos';
 require __DIR__ . '/../includes/header.php';
 ?>
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="av-page-header">
     <h2>Cursos</h2>
-    <a href="/admin/curso_form.php" class="btn btn-primary">+ Nuevo curso</a>
+    <a href="/admin/curso_form.php" class="av-btn av-btn--primary">+ Nuevo curso</a>
 </div>
 
-<div class="card">
-    <div class="table-responsive">
-        <table class="table table-hover mb-0 align-middle">
-            <thead class="table-light">
-                <tr><th>Curso</th><th>Carrera</th><th>Docente</th><th>Matriculados</th><th>Estado</th><th class="text-end">Acciones</th></tr>
-            </thead>
-            <tbody>
-            <?php foreach ($cursos as $c): ?>
-                <tr>
-                    <td><?= e($c['nombre']) ?></td>
-                    <td><?= e($c['carrera_nombre'] ?? '-') ?></td>
-                    <td><?= e($c['docente_nombre'] ?? 'Sin asignar') ?></td>
-                    <td><?= (int) $c['total_matriculados'] ?></td>
-                    <td>
-                        <?php if ($c['activo']): ?><span class="badge bg-success">Activo</span>
-                        <?php else: ?><span class="badge bg-secondary">Inactivo</span><?php endif; ?>
-                    </td>
-                    <td class="text-end">
-                        <a href="/admin/matriculas.php?curso_id=<?= (int) $c['id'] ?>" class="btn btn-sm btn-outline-secondary">Matrículas</a>
-                        <a href="/admin/curso_form.php?id=<?= (int) $c['id'] ?>" class="btn btn-sm btn-outline-primary">Editar</a>
-                        <form method="post" class="d-inline" onsubmit="return confirm('¿Eliminar este curso y todo su contenido asociado?');">
-                            <?= csrfField() ?>
-                            <input type="hidden" name="action" value="delete">
-                            <input type="hidden" name="id" value="<?= (int) $c['id'] ?>">
-                            <button class="btn btn-sm btn-outline-danger" type="submit">Eliminar</button>
-                        </form>
-                    </td>
-                </tr>
-            <?php endforeach; ?>
-            <?php if (!$cursos): ?>
-                <tr><td colspan="6" class="text-center text-muted py-4">No hay cursos registrados.</td></tr>
-            <?php endif; ?>
-            </tbody>
-        </table>
-    </div>
+<div class="av-table-wrap">
+    <table class="av-table">
+        <thead>
+            <tr><th>Curso</th><th>Carrera</th><th>Docente</th><th>Matriculados</th><th>Estado</th><th></th></tr>
+        </thead>
+        <tbody>
+        <?php foreach ($cursos as $c): ?>
+            <tr>
+                <td><strong><?= e($c['nombre']) ?></strong></td>
+                <td><?= e($c['carrera_nombre'] ?? '-') ?></td>
+                <td><?= e($c['docente_nombre'] ?? 'Sin asignar') ?></td>
+                <td><?= (int) $c['total_matriculados'] ?></td>
+                <td>
+                    <?php if ($c['activo']): ?><span class="av-badge av-badge--green">Activo</span>
+                    <?php else: ?><span class="av-badge av-badge--gray">Inactivo</span><?php endif; ?>
+                </td>
+                <td class="av-td-actions">
+                    <a href="/admin/matriculas.php?curso_id=<?= (int) $c['id'] ?>" class="av-btn av-btn--outline av-btn--sm">Matrículas</a>
+                    <a href="/admin/curso_form.php?id=<?= (int) $c['id'] ?>" class="av-btn av-btn--secondary av-btn--sm">Editar</a>
+                    <form method="post" style="display:inline" onsubmit="return confirm('¿Eliminar este curso y todo su contenido asociado?');">
+                        <?= csrfField() ?>
+                        <input type="hidden" name="action" value="delete">
+                        <input type="hidden" name="id" value="<?= (int) $c['id'] ?>">
+                        <button class="av-btn av-btn--danger av-btn--sm" type="submit">Eliminar</button>
+                    </form>
+                </td>
+            </tr>
+        <?php endforeach; ?>
+        <?php if (!$cursos): ?>
+            <tr><td colspan="6" class="av-empty">No hay cursos registrados.</td></tr>
+        <?php endif; ?>
+        </tbody>
+    </table>
 </div>
 <?php require __DIR__ . '/../includes/footer.php'; ?>

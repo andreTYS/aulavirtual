@@ -43,90 +43,86 @@ $tareas = $tareasStmt->fetchAll();
 $pageTitle = $curso['nombre'];
 require __DIR__ . '/../includes/header.php';
 ?>
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="av-page-header">
     <h2><?= e($curso['nombre']) ?></h2>
-    <a href="/estudiante/index.php" class="btn btn-outline-secondary">&larr; Mis cursos</a>
+    <a href="/estudiante/index.php" class="av-btn av-btn--outline">&larr; Mis cursos</a>
+    <p><?= nl2br(e($curso['descripcion'] ?? '')) ?></p>
 </div>
-<p class="text-muted"><?= nl2br(e($curso['descripcion'] ?? '')) ?></p>
 
-<ul class="nav nav-tabs mb-3">
-    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-contenido">Contenido</button></li>
-    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-tareas">Tareas</button></li>
-</ul>
+<div class="av-tabs-wrap">
+    <div class="av-tabs">
+        <button type="button" class="av-tab active" data-tab-target="tab-contenido">Contenido</button>
+        <button type="button" class="av-tab" data-tab-target="tab-tareas">Tareas</button>
+    </div>
 
-<div class="tab-content">
-<div class="tab-pane fade show active" id="tab-contenido">
-    <div class="accordion" id="unidadesAccordion">
+    <div class="av-tabpanel active" id="tab-contenido">
         <?php foreach ($unidades as $idx => $u): ?>
             <?php $uid = (int) $u['id']; $items = $contenidosPorUnidad[$uid] ?? []; ?>
-            <div class="accordion-item">
-                <h2 class="accordion-header">
-                    <button class="accordion-button <?= $idx > 0 ? 'collapsed' : '' ?>" type="button" data-bs-toggle="collapse" data-bs-target="#unidad-<?= $uid ?>">
-                        <?= e($u['nombre']) ?> <span class="badge bg-secondary ms-2"><?= count($items) ?> contenido(s)</span>
-                    </button>
-                </h2>
-                <div id="unidad-<?= $uid ?>" class="accordion-collapse collapse <?= $idx === 0 ? 'show' : '' ?>" data-bs-parent="#unidadesAccordion">
-                    <div class="accordion-body">
-                        <ul class="list-group">
-                            <?php foreach ($items as $item): ?>
-                                <li class="list-group-item">
-                                    <span class="badge bg-info text-dark text-uppercase"><?= e($item['tipo']) ?></span>
-                                    <strong><?= e($item['titulo']) ?></strong>
-                                    <?php if ($item['descripcion']): ?><div class="small text-muted"><?= e($item['descripcion']) ?></div><?php endif; ?>
-                                    <div>
+            <div class="av-accordion-item<?= $idx === 0 ? ' open' : '' ?>">
+                <button type="button" class="av-accordion-header">
+                    <span><?= e($u['nombre']) ?></span>
+                    <span class="av-badge av-badge--gray"><?= count($items) ?> contenido(s)</span>
+                    <span class="chev">&#9660;</span>
+                </button>
+                <div class="av-accordion-body">
+                    <div class="av-list">
+                        <?php foreach ($items as $item): ?>
+                            <div class="av-list-item">
+                                <div>
+                                    <span class="av-badge av-badge--blue"><?= e($item['tipo']) ?></span>
+                                    <span class="content-title"><?= e($item['titulo']) ?></span>
+                                    <?php if ($item['descripcion']): ?><div class="content-desc"><?= e($item['descripcion']) ?></div><?php endif; ?>
+                                    <div style="margin-top:4px">
                                         <?php if ($item['tipo'] === 'enlace'): ?>
-                                            <a href="<?= e($item['url']) ?>" target="_blank" rel="noopener">Abrir enlace</a>
+                                            <a href="<?= e($item['url']) ?>" target="_blank" rel="noopener" style="color:var(--ab600);font-weight:600;font-size:.82rem">Abrir enlace</a>
                                         <?php else: ?>
-                                            <a href="/download.php?type=contenido&id=<?= (int) $item['id'] ?>">Descargar archivo</a>
+                                            <a href="/download.php?type=contenido&id=<?= (int) $item['id'] ?>" style="color:var(--ab600);font-weight:600;font-size:.82rem">Descargar archivo</a>
                                         <?php endif; ?>
                                     </div>
-                                </li>
-                            <?php endforeach; ?>
-                            <?php if (!$items): ?>
-                                <li class="list-group-item text-muted">Sin contenido publicado en esta unidad.</li>
-                            <?php endif; ?>
-                        </ul>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                        <?php if (!$items): ?>
+                            <div class="av-empty">Sin contenido publicado en esta unidad.</div>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
         <?php endforeach; ?>
         <?php if (!$unidades): ?>
-            <div class="alert alert-info">El docente aún no ha publicado unidades para este curso.</div>
+            <div class="av-alert av-alert--danger"><span>El docente aún no ha publicado unidades para este curso.</span></div>
         <?php endif; ?>
     </div>
-</div>
 
-<div class="tab-pane fade" id="tab-tareas">
-    <div class="card">
-        <div class="table-responsive">
-            <table class="table table-hover mb-0 align-middle">
-                <thead class="table-light"><tr><th>Tarea</th><th>Fecha límite</th><th>Estado</th><th></th></tr></thead>
+    <div class="av-tabpanel" id="tab-tareas">
+        <div class="av-table-wrap">
+            <table class="av-table">
+                <thead><tr><th>Tarea</th><th>Fecha límite</th><th>Estado</th><th></th></tr></thead>
                 <tbody>
                 <?php foreach ($tareas as $t): ?>
                     <tr>
-                        <td><?= e($t['titulo']) ?></td>
+                        <td><strong><?= e($t['titulo']) ?></strong></td>
                         <td><?= formatDateEs($t['fecha_limite']) ?></td>
                         <td>
                             <?php if ($t['calificacion'] !== null): ?>
-                                <span class="badge bg-success">Calificado: <?= e((string) $t['calificacion']) ?>/20</span>
+                                <span class="av-badge av-badge--green">Calificado: <?= e((string) $t['calificacion']) ?>/20</span>
                             <?php elseif ($t['entrega_id']): ?>
-                                <span class="badge bg-primary">Entregado</span>
+                                <span class="av-badge av-badge--blue">Entregado</span>
                             <?php elseif (isPastDue($t['fecha_limite'])): ?>
-                                <span class="badge bg-danger">Vencida - sin entregar</span>
+                                <span class="av-badge av-badge--red">Vencida - sin entregar</span>
                             <?php else: ?>
-                                <span class="badge bg-warning text-dark">Pendiente</span>
+                                <span class="av-badge av-badge--amber">Pendiente</span>
                             <?php endif; ?>
                         </td>
-                        <td><a href="/estudiante/tarea.php?id=<?= (int) $t['id'] ?>" class="btn btn-sm btn-outline-primary">Ver detalle</a></td>
+                        <td><a href="/estudiante/tarea.php?id=<?= (int) $t['id'] ?>" class="av-btn av-btn--secondary av-btn--sm">Ver detalle</a></td>
                     </tr>
                 <?php endforeach; ?>
                 <?php if (!$tareas): ?>
-                    <tr><td colspan="4" class="text-center text-muted py-4">No hay tareas publicadas.</td></tr>
+                    <tr><td colspan="4" class="av-empty">No hay tareas publicadas.</td></tr>
                 <?php endif; ?>
                 </tbody>
             </table>
         </div>
     </div>
-</div>
 </div>
 <?php require __DIR__ . '/../includes/footer.php'; ?>

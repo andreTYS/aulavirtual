@@ -22,27 +22,22 @@ $cursos = $stmt->fetchAll();
 $pageTitle = 'Mis cursos';
 require __DIR__ . '/../includes/header.php';
 ?>
-<h2 class="mb-4">Mis cursos</h2>
+<div class="av-page-header"><h2>Mis cursos</h2></div>
 
-<div class="row g-3">
+<div class="av-course-grid">
     <?php foreach ($cursos as $c): ?>
-        <div class="col-md-6 col-lg-4">
-            <div class="card h-100">
-                <div class="card-body d-flex flex-column">
-                    <h5><?= e($c['nombre']) ?></h5>
-                    <p class="text-muted small mb-1"><?= e($c['carrera_nombre'] ?? '-') ?></p>
-                    <p class="small flex-grow-1"><?= nl2br(e($c['descripcion'] ?? '')) ?></p>
-                    <p class="small text-muted">
-                        <?= (int) $c['total_matriculados'] ?> estudiante(s) &middot; <?= (int) $c['total_tareas'] ?> tarea(s)
-                    </p>
-                    <a href="/docente/curso.php?id=<?= (int) $c['id'] ?>" class="btn btn-primary mt-auto">Entrar al curso</a>
-                </div>
-            </div>
+        <div class="av-course-card">
+            <div class="av-course-card__top"></div>
+            <h3><?= e($c['nombre']) ?></h3>
+            <div class="meta"><?= e($c['carrera_nombre'] ?? '-') ?></div>
+            <p class="stats"><?= nl2br(e($c['descripcion'] ?? '')) ?></p>
+            <p class="stats"><?= (int) $c['total_matriculados'] ?> estudiante(s) &middot; <?= (int) $c['total_tareas'] ?> tarea(s)</p>
+            <a href="/docente/curso.php?id=<?= (int) $c['id'] ?>" class="av-btn av-btn--primary av-btn--block">Entrar al curso</a>
         </div>
     <?php endforeach; ?>
     <?php if (!$cursos): ?>
-        <div class="col-12">
-            <div class="alert alert-info">Aún no tiene cursos asignados. Contacte al administrador.</div>
+        <div class="av-alert av-alert--danger" style="grid-column:1/-1">
+            <span>Aún no tiene cursos asignados. Contacte al administrador.</span>
         </div>
     <?php endif; ?>
 </div>

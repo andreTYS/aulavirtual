@@ -61,11 +61,11 @@ $alumnos = $alumnos->fetchAll();
 $pageTitle = 'Entregas - ' . $tarea['titulo'];
 require __DIR__ . '/../includes/header.php';
 ?>
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="av-page-header">
     <h2><?= e($tarea['titulo']) ?></h2>
-    <a href="/docente/curso.php?id=<?= (int) $tarea['curso_id'] ?>" class="btn btn-outline-secondary">&larr; <?= e($tarea['curso_nombre']) ?></a>
+    <a href="/docente/curso.php?id=<?= (int) $tarea['curso_id'] ?>" class="av-btn av-btn--outline">&larr; <?= e($tarea['curso_nombre']) ?></a>
+    <p>Fecha límite: <?= formatDateEs($tarea['fecha_limite']) ?></p>
 </div>
-<p class="text-muted">Fecha límite: <?= formatDateEs($tarea['fecha_limite']) ?></p>
 
 <?php foreach ($alumnos as $a): ?>
     <?php if ($a['entrega_id']): ?>
@@ -77,44 +77,44 @@ require __DIR__ . '/../includes/header.php';
     <?php endif; ?>
 <?php endforeach; ?>
 
-<div class="card">
-    <div class="table-responsive">
-        <table class="table table-hover mb-0 align-middle">
-            <thead class="table-light">
-                <tr><th>Estudiante</th><th>Entrega</th><th>Calificación (0-20)</th><th>Comentario</th><th></th></tr>
-            </thead>
-            <tbody>
-            <?php foreach ($alumnos as $a): ?>
-                <?php $formId = 'form-entrega-' . (int) $a['entrega_id']; ?>
-                <tr>
-                    <td><?= e($a['nombre'] . ' ' . $a['apellidos']) ?></td>
-                    <td>
-                        <?php if ($a['entrega_id']): ?>
-                            <a href="/download.php?type=entrega&id=<?= (int) $a['entrega_id'] ?>">Descargar</a>
-                            <div class="small text-muted"><?= formatDateEs($a['fecha_entrega']) ?></div>
-                        <?php else: ?>
-                            <span class="badge bg-secondary">Sin entregar</span>
-                        <?php endif; ?>
-                    </td>
+<div class="av-table-wrap">
+    <table class="av-table">
+        <thead>
+            <tr><th>Estudiante</th><th>Entrega</th><th>Calificación (0-20)</th><th>Comentario</th><th></th></tr>
+        </thead>
+        <tbody>
+        <?php foreach ($alumnos as $a): ?>
+            <?php $formId = 'form-entrega-' . (int) $a['entrega_id']; ?>
+            <tr>
+                <td><strong><?= e($a['nombre'] . ' ' . $a['apellidos']) ?></strong></td>
+                <td>
                     <?php if ($a['entrega_id']): ?>
-                        <td style="max-width:120px">
-                            <input type="number" name="calificacion" form="<?= $formId ?>" class="form-control form-control-sm" min="0" max="20" step="0.5"
-                                   value="<?= e($a['calificacion'] !== null ? (string) $a['calificacion'] : '') ?>" required>
-                        </td>
-                        <td>
-                            <input type="text" name="comentario" form="<?= $formId ?>" class="form-control form-control-sm" value="<?= e($a['comentario'] ?? '') ?>">
-                        </td>
-                        <td><button class="btn btn-sm btn-primary" form="<?= $formId ?>" type="submit">Guardar</button></td>
+                        <a href="/download.php?type=entrega&id=<?= (int) $a['entrega_id'] ?>" style="color:var(--ab600);font-weight:600">Descargar</a>
+                        <div style="font-size:.75rem;color:var(--n500)"><?= formatDateEs($a['fecha_entrega']) ?></div>
                     <?php else: ?>
-                        <td class="text-muted">-</td><td class="text-muted">-</td><td>-</td>
+                        <span class="av-badge av-badge--gray">Sin entregar</span>
                     <?php endif; ?>
-                </tr>
-            <?php endforeach; ?>
-            <?php if (!$alumnos): ?>
-                <tr><td colspan="5" class="text-center text-muted py-4">No hay estudiantes matriculados en este curso.</td></tr>
-            <?php endif; ?>
-            </tbody>
-        </table>
-    </div>
+                </td>
+                <?php if ($a['entrega_id']): ?>
+                    <td style="max-width:110px">
+                        <input type="number" name="calificacion" form="<?= $formId ?>" min="0" max="20" step="0.5"
+                               value="<?= e($a['calificacion'] !== null ? (string) $a['calificacion'] : '') ?>" required
+                               style="width:100%;padding:7px 10px;border:1.5px solid var(--n200);border-radius:6px">
+                    </td>
+                    <td>
+                        <input type="text" name="comentario" form="<?= $formId ?>" value="<?= e($a['comentario'] ?? '') ?>"
+                               style="width:100%;padding:7px 10px;border:1.5px solid var(--n200);border-radius:6px">
+                    </td>
+                    <td><button class="av-btn av-btn--primary av-btn--sm" form="<?= $formId ?>" type="submit">Guardar</button></td>
+                <?php else: ?>
+                    <td class="av-text-muted">-</td><td class="av-text-muted">-</td><td>-</td>
+                <?php endif; ?>
+            </tr>
+        <?php endforeach; ?>
+        <?php if (!$alumnos): ?>
+            <tr><td colspan="5" class="av-empty">No hay estudiantes matriculados en este curso.</td></tr>
+        <?php endif; ?>
+        </tbody>
+    </table>
 </div>
 <?php require __DIR__ . '/../includes/footer.php'; ?>

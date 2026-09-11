@@ -29,23 +29,23 @@ foreach ($filas as $f) {
 $pageTitle = 'Mis calificaciones';
 require __DIR__ . '/../includes/header.php';
 ?>
-<h2 class="mb-4">Mis calificaciones</h2>
+<div class="av-page-header"><h2>Mis calificaciones</h2></div>
 
 <?php foreach ($porCurso as $curso): ?>
     <?php
         $notas = array_filter(array_column($curso['tareas'], 'calificacion'), fn($n) => $n !== null);
         $promedio = $notas ? array_sum($notas) / count($notas) : null;
     ?>
-    <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <span><?= e($curso['nombre']) ?></span>
+    <div class="av-card" style="margin-bottom:18px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+            <h3 style="margin:0"><?= e($curso['nombre']) ?></h3>
             <?php if ($promedio !== null): ?>
-                <span class="badge bg-<?= $promedio >= 11 ? 'success' : 'danger' ?>">Promedio: <?= number_format($promedio, 2) ?> / 20</span>
+                <span class="av-badge av-badge--<?= $promedio >= 11 ? 'green' : 'red' ?>">Promedio: <?= number_format($promedio, 2) ?> / 20</span>
             <?php endif; ?>
         </div>
-        <div class="table-responsive">
-            <table class="table mb-0 align-middle">
-                <thead class="table-light"><tr><th>Tarea</th><th>Fecha límite</th><th>Calificación</th><th>Comentario</th></tr></thead>
+        <div class="av-table-wrap">
+            <table class="av-table">
+                <thead><tr><th>Tarea</th><th>Fecha límite</th><th>Calificación</th><th>Comentario</th></tr></thead>
                 <tbody>
                 <?php foreach ($curso['tareas'] as $t): ?>
                     <tr>
@@ -53,11 +53,11 @@ require __DIR__ . '/../includes/header.php';
                         <td><?= formatDateEs($t['fecha_limite']) ?></td>
                         <td>
                             <?php if ($t['calificacion'] !== null): ?>
-                                <?= e((string) $t['calificacion']) ?> / 20
+                                <strong><?= e((string) $t['calificacion']) ?> / 20</strong>
                             <?php elseif ($t['fecha_entrega']): ?>
-                                <span class="text-muted">Entregado, sin calificar</span>
+                                <span class="av-text-muted">Entregado, sin calificar</span>
                             <?php else: ?>
-                                <span class="text-muted">Sin entregar</span>
+                                <span class="av-text-muted">Sin entregar</span>
                             <?php endif; ?>
                         </td>
                         <td><?= e($t['comentario'] ?? '') ?></td>
@@ -69,6 +69,6 @@ require __DIR__ . '/../includes/header.php';
     </div>
 <?php endforeach; ?>
 <?php if (!$porCurso): ?>
-    <div class="alert alert-info">No hay tareas registradas todavía.</div>
+    <div class="av-alert av-alert--danger"><span>No hay tareas registradas todavía.</span></div>
 <?php endif; ?>
 <?php require __DIR__ . '/../includes/footer.php'; ?>

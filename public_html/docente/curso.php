@@ -133,168 +133,158 @@ $tareas = $tareasStmt->fetchAll();
 $pageTitle = $curso['nombre'];
 require __DIR__ . '/../includes/header.php';
 ?>
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="av-page-header">
     <h2><?= e($curso['nombre']) ?></h2>
-    <a href="/docente/index.php" class="btn btn-outline-secondary">&larr; Mis cursos</a>
+    <a href="/docente/index.php" class="av-btn av-btn--outline">&larr; Mis cursos</a>
+    <p><?= nl2br(e($curso['descripcion'] ?? '')) ?></p>
 </div>
-<p class="text-muted"><?= nl2br(e($curso['descripcion'] ?? '')) ?></p>
 
-<ul class="nav nav-tabs mb-3" id="cursoTabs">
-    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-contenido">Contenido</button></li>
-    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-tareas">Tareas</button></li>
-</ul>
+<div class="av-tabs-wrap">
+    <div class="av-tabs">
+        <button type="button" class="av-tab active" data-tab-target="tab-contenido">Contenido</button>
+        <button type="button" class="av-tab" data-tab-target="tab-tareas">Tareas</button>
+    </div>
 
-<div class="tab-content">
-<div class="tab-pane fade show active" id="tab-contenido">
-
-    <div class="card mb-3">
-        <div class="card-header">+ Nueva unidad / semana</div>
-        <div class="card-body">
-            <form method="post" class="row g-2">
+    <div class="av-tabpanel active" id="tab-contenido">
+        <div class="av-card" style="margin-bottom:16px">
+            <h3>+ Nueva unidad / semana</h3>
+            <form method="post" class="av-inline-form">
                 <?= csrfField() ?>
                 <input type="hidden" name="action" value="create_unidad">
                 <input type="hidden" name="curso_id" value="<?= $cursoId ?>">
-                <div class="col-md-7"><input type="text" name="nombre" class="form-control" placeholder="Ej. Unidad 1 - Introducción" required></div>
-                <div class="col-md-2"><input type="number" name="orden" class="form-control" placeholder="Orden" value="<?= count($unidades) + 1 ?>" min="1"></div>
-                <div class="col-md-3"><button class="btn btn-primary w-100" type="submit">Agregar</button></div>
+                <div class="av-fg" style="flex:3"><input type="text" name="nombre" placeholder="Ej. Unidad 1 - Introducción" required></div>
+                <div class="av-fg" style="flex:1"><input type="number" name="orden" placeholder="Orden" value="<?= count($unidades) + 1 ?>" min="1"></div>
+                <button class="av-btn av-btn--primary" type="submit">Agregar</button>
             </form>
         </div>
-    </div>
 
-    <div class="accordion" id="unidadesAccordion">
         <?php foreach ($unidades as $idx => $u): ?>
             <?php $uid = (int) $u['id']; $items = $contenidosPorUnidad[$uid] ?? []; ?>
-            <div class="accordion-item">
-                <h2 class="accordion-header">
-                    <button class="accordion-button <?= $idx > 0 ? 'collapsed' : '' ?>" type="button" data-bs-toggle="collapse" data-bs-target="#unidad-<?= $uid ?>">
-                        <?= e($u['nombre']) ?> <span class="badge bg-secondary ms-2"><?= count($items) ?> contenido(s)</span>
-                    </button>
-                </h2>
-                <div id="unidad-<?= $uid ?>" class="accordion-collapse collapse <?= $idx === 0 ? 'show' : '' ?>" data-bs-parent="#unidadesAccordion">
-                    <div class="accordion-body">
-                        <ul class="list-group mb-3">
-                            <?php foreach ($items as $item): ?>
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <span class="badge bg-info text-dark text-uppercase"><?= e($item['tipo']) ?></span>
-                                        <strong><?= e($item['titulo']) ?></strong>
-                                        <?php if ($item['descripcion']): ?><div class="small text-muted"><?= e($item['descripcion']) ?></div><?php endif; ?>
+            <div class="av-accordion-item<?= $idx === 0 ? ' open' : '' ?>">
+                <button type="button" class="av-accordion-header">
+                    <span><?= e($u['nombre']) ?></span>
+                    <span class="av-badge av-badge--gray"><?= count($items) ?> contenido(s)</span>
+                    <span class="chev">&#9660;</span>
+                </button>
+                <div class="av-accordion-body">
+                    <div class="av-list" style="margin-bottom:16px">
+                        <?php foreach ($items as $item): ?>
+                            <div class="av-list-item">
+                                <div>
+                                    <span class="av-badge av-badge--blue"><?= e($item['tipo']) ?></span>
+                                    <span class="content-title"><?= e($item['titulo']) ?></span>
+                                    <?php if ($item['descripcion']): ?><div class="content-desc"><?= e($item['descripcion']) ?></div><?php endif; ?>
+                                    <div style="margin-top:4px">
                                         <?php if ($item['tipo'] === 'enlace'): ?>
-                                            <a href="<?= e($item['url']) ?>" target="_blank" rel="noopener">Abrir enlace</a>
+                                            <a href="<?= e($item['url']) ?>" target="_blank" rel="noopener" style="color:var(--ab600);font-weight:600;font-size:.82rem">Abrir enlace</a>
                                         <?php else: ?>
-                                            <a href="/download.php?type=contenido&id=<?= (int) $item['id'] ?>">Descargar archivo</a>
+                                            <a href="/download.php?type=contenido&id=<?= (int) $item['id'] ?>" style="color:var(--ab600);font-weight:600;font-size:.82rem">Descargar archivo</a>
                                         <?php endif; ?>
                                     </div>
-                                    <form method="post" onsubmit="return confirm('¿Eliminar este contenido?');">
-                                        <?= csrfField() ?>
-                                        <input type="hidden" name="action" value="delete_contenido">
-                                        <input type="hidden" name="curso_id" value="<?= $cursoId ?>">
-                                        <input type="hidden" name="contenido_id" value="<?= (int) $item['id'] ?>">
-                                        <button class="btn btn-sm btn-outline-danger" type="submit">Eliminar</button>
-                                    </form>
-                                </li>
-                            <?php endforeach; ?>
-                            <?php if (!$items): ?>
-                                <li class="list-group-item text-muted">Sin contenido publicado en esta unidad.</li>
-                            <?php endif; ?>
-                        </ul>
-
-                        <form method="post" enctype="multipart/form-data" class="border rounded p-3 bg-light">
-                            <?= csrfField() ?>
-                            <input type="hidden" name="action" value="create_contenido">
-                            <input type="hidden" name="curso_id" value="<?= $cursoId ?>">
-                            <input type="hidden" name="unidad_id" value="<?= $uid ?>">
-                            <div class="row g-2">
-                                <div class="col-md-4">
-                                    <input type="text" name="titulo" class="form-control" placeholder="Título" required>
                                 </div>
-                                <div class="col-md-3">
-                                    <select name="tipo" class="form-select tipo-select" required onchange="toggleTipoInputs(this)">
-                                        <option value="">Tipo</option>
-                                        <option value="pdf">PDF</option>
-                                        <option value="video">Video</option>
-                                        <option value="enlace">Enlace</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-5">
-                                    <input type="file" name="archivo" class="form-control campo-archivo">
-                                    <input type="url" name="url" class="form-control campo-url d-none" placeholder="https://...">
-                                </div>
-                                <div class="col-12">
-                                    <input type="text" name="descripcion" class="form-control" placeholder="Descripción (opcional)">
-                                </div>
-                                <div class="col-12">
-                                    <button class="btn btn-primary btn-sm" type="submit">Publicar contenido</button>
-                                </div>
+                                <form method="post" onsubmit="return confirm('¿Eliminar este contenido?');">
+                                    <?= csrfField() ?>
+                                    <input type="hidden" name="action" value="delete_contenido">
+                                    <input type="hidden" name="curso_id" value="<?= $cursoId ?>">
+                                    <input type="hidden" name="contenido_id" value="<?= (int) $item['id'] ?>">
+                                    <button class="av-btn av-btn--danger av-btn--sm" type="submit">Eliminar</button>
+                                </form>
                             </div>
-                        </form>
+                        <?php endforeach; ?>
+                        <?php if (!$items): ?>
+                            <div class="av-empty">Sin contenido publicado en esta unidad.</div>
+                        <?php endif; ?>
                     </div>
+
+                    <form method="post" enctype="multipart/form-data">
+                        <?= csrfField() ?>
+                        <input type="hidden" name="action" value="create_contenido">
+                        <input type="hidden" name="curso_id" value="<?= $cursoId ?>">
+                        <input type="hidden" name="unidad_id" value="<?= $uid ?>">
+                        <div class="av-form-grid">
+                            <div class="av-fg"><label>Título</label><input type="text" name="titulo" required></div>
+                            <div class="av-fg">
+                                <label>Tipo</label>
+                                <select name="tipo" class="tipo-select" required onchange="toggleTipoInputs(this)">
+                                    <option value="">Seleccionar</option>
+                                    <option value="pdf">PDF</option>
+                                    <option value="video">Video</option>
+                                    <option value="enlace">Enlace</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="av-fg">
+                            <label>Archivo / enlace</label>
+                            <input type="file" name="archivo" class="campo-archivo">
+                            <input type="url" name="url" class="campo-url d-none" placeholder="https://..." style="display:none;margin-top:6px">
+                        </div>
+                        <div class="av-fg"><label>Descripción (opcional)</label><input type="text" name="descripcion"></div>
+                        <button class="av-btn av-btn--primary av-btn--sm" type="submit">Publicar contenido</button>
+                    </form>
                 </div>
             </div>
         <?php endforeach; ?>
         <?php if (!$unidades): ?>
-            <div class="alert alert-info">Cree primero una unidad para poder publicar contenido.</div>
+            <div class="av-alert av-alert--danger"><span>Cree primero una unidad para poder publicar contenido.</span></div>
         <?php endif; ?>
     </div>
-</div>
 
-<div class="tab-pane fade" id="tab-tareas">
-    <div class="card mb-3">
-        <div class="card-header">+ Nueva tarea</div>
-        <div class="card-body">
-            <form method="post" class="row g-2">
+    <div class="av-tabpanel" id="tab-tareas">
+        <div class="av-card" style="margin-bottom:16px">
+            <h3>+ Nueva tarea</h3>
+            <form method="post">
                 <?= csrfField() ?>
                 <input type="hidden" name="action" value="create_tarea">
                 <input type="hidden" name="curso_id" value="<?= $cursoId ?>">
-                <div class="col-md-4"><input type="text" name="titulo" class="form-control" placeholder="Título" required></div>
-                <div class="col-md-3">
-                    <select name="unidad_id" class="form-select">
-                        <option value="">Sin unidad específica</option>
-                        <?php foreach ($unidades as $u): ?>
-                            <option value="<?= (int) $u['id'] ?>"><?= e($u['nombre']) ?></option>
-                        <?php endforeach; ?>
-                    </select>
+                <div class="av-form-grid">
+                    <div class="av-fg"><label>Título</label><input type="text" name="titulo" required></div>
+                    <div class="av-fg">
+                        <label>Unidad</label>
+                        <select name="unidad_id">
+                            <option value="">Sin unidad específica</option>
+                            <?php foreach ($unidades as $u): ?>
+                                <option value="<?= (int) $u['id'] ?>"><?= e($u['nombre']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="av-fg"><label>Fecha límite</label><input type="datetime-local" name="fecha_limite" required></div>
                 </div>
-                <div class="col-md-3"><input type="datetime-local" name="fecha_limite" class="form-control" required></div>
-                <div class="col-md-2"><button class="btn btn-primary w-100" type="submit">Crear</button></div>
-                <div class="col-12"><textarea name="descripcion" class="form-control" rows="2" placeholder="Descripción / indicaciones"></textarea></div>
+                <div class="av-fg"><label>Descripción / indicaciones</label><textarea name="descripcion" rows="2"></textarea></div>
+                <button class="av-btn av-btn--primary" type="submit">Crear tarea</button>
             </form>
         </div>
-    </div>
 
-    <div class="card">
-        <div class="table-responsive">
-            <table class="table table-hover mb-0 align-middle">
-                <thead class="table-light"><tr><th>Título</th><th>Fecha límite</th><th>Entregas</th><th class="text-end">Acciones</th></tr></thead>
+        <div class="av-table-wrap">
+            <table class="av-table">
+                <thead><tr><th>Título</th><th>Fecha límite</th><th>Entregas</th><th></th></tr></thead>
                 <tbody>
                 <?php foreach ($tareas as $t): ?>
                     <tr>
                         <td>
-                            <?= e($t['titulo']) ?>
-                            <?php if (isPastDue($t['fecha_limite'])): ?><span class="badge bg-danger ms-1">Vencida</span><?php endif; ?>
+                            <strong><?= e($t['titulo']) ?></strong>
+                            <?php if (isPastDue($t['fecha_limite'])): ?><span class="av-badge av-badge--red">Vencida</span><?php endif; ?>
                         </td>
                         <td><?= formatDateEs($t['fecha_limite']) ?></td>
                         <td><?= (int) $t['total_calificadas'] ?> / <?= (int) $t['total_entregas'] ?> calificadas</td>
-                        <td class="text-end">
-                            <a href="/docente/tarea_entregas.php?tarea_id=<?= (int) $t['id'] ?>" class="btn btn-sm btn-outline-primary">Ver entregas</a>
-                            <form method="post" class="d-inline" onsubmit="return confirm('¿Eliminar esta tarea y sus entregas?');">
+                        <td class="av-td-actions">
+                            <a href="/docente/tarea_entregas.php?tarea_id=<?= (int) $t['id'] ?>" class="av-btn av-btn--secondary av-btn--sm">Ver entregas</a>
+                            <form method="post" style="display:inline" onsubmit="return confirm('¿Eliminar esta tarea y sus entregas?');">
                                 <?= csrfField() ?>
                                 <input type="hidden" name="action" value="delete_tarea">
                                 <input type="hidden" name="curso_id" value="<?= $cursoId ?>">
                                 <input type="hidden" name="tarea_id" value="<?= (int) $t['id'] ?>">
-                                <button class="btn btn-sm btn-outline-danger" type="submit">Eliminar</button>
+                                <button class="av-btn av-btn--danger av-btn--sm" type="submit">Eliminar</button>
                             </form>
                         </td>
                     </tr>
                 <?php endforeach; ?>
                 <?php if (!$tareas): ?>
-                    <tr><td colspan="4" class="text-center text-muted py-4">No hay tareas creadas.</td></tr>
+                    <tr><td colspan="4" class="av-empty">No hay tareas creadas.</td></tr>
                 <?php endif; ?>
                 </tbody>
             </table>
         </div>
     </div>
-</div>
 </div>
 
 <script>
@@ -303,11 +293,11 @@ function toggleTipoInputs(select) {
     const archivo = form.querySelector('.campo-archivo');
     const url = form.querySelector('.campo-url');
     if (select.value === 'enlace') {
-        archivo.classList.add('d-none'); archivo.required = false; archivo.value = '';
-        url.classList.remove('d-none'); url.required = true;
+        archivo.style.display = 'none'; archivo.required = false; archivo.value = '';
+        url.style.display = 'block'; url.required = true;
     } else {
-        url.classList.add('d-none'); url.required = false; url.value = '';
-        archivo.classList.remove('d-none'); archivo.required = true;
+        url.style.display = 'none'; url.required = false; url.value = '';
+        archivo.style.display = 'block'; archivo.required = true;
     }
 }
 </script>

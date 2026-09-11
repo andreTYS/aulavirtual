@@ -107,62 +107,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $pageTitle = $editing ? 'Editar usuario' : 'Nuevo usuario';
 require __DIR__ . '/../includes/header.php';
 ?>
-<h2 class="mb-4"><?= e($pageTitle) ?></h2>
+<div class="av-page-header"><h2><?= e($pageTitle) ?></h2></div>
 
 <?php if ($errors): ?>
-    <div class="alert alert-danger">
-        <ul class="mb-0">
-            <?php foreach ($errors as $err): ?><li><?= e($err) ?></li><?php endforeach; ?>
-        </ul>
+    <div class="av-alert av-alert--danger">
+        <span><?php foreach ($errors as $err): ?><?= e($err) ?><br><?php endforeach; ?></span>
     </div>
 <?php endif; ?>
 
-<div class="card">
-    <div class="card-body">
-        <form method="post" novalidate>
-            <?= csrfField() ?>
-            <?php if ($editing): ?><input type="hidden" name="id" value="<?= $id ?>"><?php endif; ?>
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label">Nombre</label>
-                    <input type="text" name="nombre" class="form-control" value="<?= e($usuario['nombre']) ?>" required>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Apellidos</label>
-                    <input type="text" name="apellidos" class="form-control" value="<?= e($usuario['apellidos']) ?>" required>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Usuario</label>
-                    <input type="text" name="username" class="form-control" value="<?= e($usuario['username']) ?>" required>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Correo electrónico</label>
-                    <input type="email" name="email" class="form-control" value="<?= e($usuario['email']) ?>" required>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Rol</label>
-                    <select name="rol" class="form-select">
-                        <option value="administrador" <?= $usuario['rol'] === 'administrador' ? 'selected' : '' ?>>Administrador</option>
-                        <option value="docente" <?= $usuario['rol'] === 'docente' ? 'selected' : '' ?>>Docente</option>
-                        <option value="estudiante" <?= $usuario['rol'] === 'estudiante' ? 'selected' : '' ?>>Estudiante</option>
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Contraseña <?= $editing ? '(dejar en blanco para no cambiar)' : '' ?></label>
-                    <input type="password" name="password" class="form-control" <?= $editing ? '' : 'required' ?>>
-                </div>
-                <div class="col-12">
-                    <div class="form-check">
-                        <input type="checkbox" name="activo" class="form-check-input" id="activo" <?= $usuario['activo'] ? 'checked' : '' ?>>
-                        <label class="form-check-label" for="activo">Usuario activo</label>
-                    </div>
-                </div>
+<div class="av-card" style="max-width:640px">
+    <form method="post" novalidate>
+        <?= csrfField() ?>
+        <?php if ($editing): ?><input type="hidden" name="id" value="<?= $id ?>"><?php endif; ?>
+        <div class="av-form-grid">
+            <div class="av-fg">
+                <label>Nombre</label>
+                <input type="text" name="nombre" value="<?= e($usuario['nombre']) ?>" required>
             </div>
-            <div class="mt-4">
-                <button type="submit" class="btn btn-primary">Guardar</button>
-                <a href="/admin/usuarios.php" class="btn btn-outline-secondary">Cancelar</a>
+            <div class="av-fg">
+                <label>Apellidos</label>
+                <input type="text" name="apellidos" value="<?= e($usuario['apellidos']) ?>" required>
             </div>
-        </form>
-    </div>
+            <div class="av-fg">
+                <label>Usuario</label>
+                <input type="text" name="username" value="<?= e($usuario['username']) ?>" required>
+            </div>
+            <div class="av-fg">
+                <label>Correo electrónico</label>
+                <input type="email" name="email" value="<?= e($usuario['email']) ?>" required>
+            </div>
+            <div class="av-fg">
+                <label>Rol</label>
+                <select name="rol">
+                    <option value="administrador" <?= $usuario['rol'] === 'administrador' ? 'selected' : '' ?>>Administrador</option>
+                    <option value="docente" <?= $usuario['rol'] === 'docente' ? 'selected' : '' ?>>Docente</option>
+                    <option value="estudiante" <?= $usuario['rol'] === 'estudiante' ? 'selected' : '' ?>>Estudiante</option>
+                </select>
+            </div>
+            <div class="av-fg">
+                <label>Contraseña <?= $editing ? '(dejar en blanco para no cambiar)' : '' ?></label>
+                <input type="password" name="password" <?= $editing ? '' : 'required' ?>>
+            </div>
+        </div>
+        <div class="av-fg">
+            <label style="text-transform:none;font-weight:600">
+                <input type="checkbox" name="activo" <?= $usuario['activo'] ? 'checked' : '' ?>> Usuario activo
+            </label>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:10px">
+            <button type="submit" class="av-btn av-btn--primary">Guardar</button>
+            <a href="/admin/usuarios.php" class="av-btn av-btn--outline">Cancelar</a>
+        </div>
+    </form>
 </div>
 <?php require __DIR__ . '/../includes/footer.php'; ?>
