@@ -227,6 +227,44 @@ CREATE TABLE IF NOT EXISTS comentarios (
     KEY idx_comentarios_curso (curso_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ------------------------------------------------------------
+-- conceptos_pago: catalogo de conceptos (matricula, pension, etc.)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS conceptos_pago (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(150) NOT NULL,
+    monto_sugerido DECIMAL(8,2) NULL,
+    activo TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_concepto_nombre (nombre)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- pagos: registro de pagos/vouchers de un estudiante. El estudiante
+-- sube su comprobante (queda "pendiente") y el administrador lo
+-- valida o rechaza; el administrador tambien puede registrar un
+-- pago ya validado directamente (ej. pago en oficina).
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS pagos (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    estudiante_id INT UNSIGNED NOT NULL,
+    concepto_pago_id INT UNSIGNED NOT NULL,
+    monto DECIMAL(8,2) NOT NULL,
+    fecha_pago DATE NOT NULL,
+    numero_voucher VARCHAR(100) NULL,
+    comprobante_path VARCHAR(500) NULL,
+    estado ENUM('pendiente','validado','rechazado') NOT NULL DEFAULT 'pendiente',
+    observacion TEXT NULL,
+    registrado_por INT UNSIGNED NULL,
+    fecha_validacion TIMESTAMP NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_pagos_estudiante FOREIGN KEY (estudiante_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    CONSTRAINT fk_pagos_concepto FOREIGN KEY (concepto_pago_id) REFERENCES conceptos_pago(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_pagos_registrador FOREIGN KEY (registrado_por) REFERENCES usuarios(id) ON DELETE SET NULL,
+    KEY idx_pagos_estudiante (estudiante_id),
+    KEY idx_pagos_estado (estado)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ============================================================
@@ -239,6 +277,12 @@ INSERT INTO carreras (nombre, duracion_ciclos) VALUES
     ('Contabilidad', 6),
     ('Administración de Empresas', 6),
     ('Electrónica Industrial', 6)
+ON DUPLICATE KEY UPDATE nombre = VALUES(nombre);
+
+INSERT INTO conceptos_pago (nombre, monto_sugerido) VALUES
+    ('Matrícula', 150.00),
+    ('Pensión mensual', 250.00),
+    ('Certificado / trámite', 50.00)
 ON DUPLICATE KEY UPDATE nombre = VALUES(nombre);
 
 -- Usuario administrador inicial.

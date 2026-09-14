@@ -33,5 +33,6 @@ define('UPLOADS_ENTREGAS', UPLOADS_PATH . '/entregas');
 define('MAX_UPLOAD_BYTES', 50 * 1024 * 1024); // 50 MB
 define('ALLOWED_CONTENIDO_EXT', ['pdf', 'mp4', 'webm', 'avi', 'mov', 'mkv']);
 define('ALLOWED_ENTREGA_EXT', ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip', 'rar', 'jpg', 'jpeg', 'png']);
+define('ALLOWED_COMPROBANTE_EXT', ['pdf', 'jpg', 'jpeg', 'png']);
 
 define('APP_NAME', 'Aula Virtual - IESTP Benjamín Franklin');
