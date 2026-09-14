@@ -138,6 +138,11 @@ function isSessionPast(string $fecha): bool
     return strtotime($fecha) < strtotime(date('Y-m-d'));
 }
 
+function formatSoles(?string $monto): string
+{
+    return 'S/ ' . number_format((float) $monto, 2);
+}
+
 /**
  * Devuelve el markup de un icono SVG en linea (sin dependencias externas).
  */

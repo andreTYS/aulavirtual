@@ -10,6 +10,7 @@ $totalDocentes = (int) $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol = 'd
 $totalEstudiantes = (int) $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol = 'estudiante'")->fetchColumn();
 $totalCursos = (int) $pdo->query("SELECT COUNT(*) FROM cursos")->fetchColumn();
 $totalMatriculas = (int) $pdo->query("SELECT COUNT(*) FROM matriculas WHERE estado = 'activo'")->fetchColumn();
+$totalPagosPendientes = (int) $pdo->query("SELECT COUNT(*) FROM pagos WHERE estado = 'pendiente'")->fetchColumn();
 
 $avisos = $pdo->query(
     "SELECT a.*, c.nombre AS curso_nombre FROM avisos a
@@ -33,6 +34,7 @@ require __DIR__ . '/../includes/header.php';
     <div class="av-stat"><div class="av-stat__icon" style="background:var(--ag100);color:var(--ag700)"><?= avIcon('users') ?></div><div class="av-stat__num"><?= $totalEstudiantes ?></div><div class="av-stat__lbl">Estudiantes</div><div class="av-stat__bar" style="background:var(--ag500)"></div></div>
     <div class="av-stat"><div class="av-stat__icon" style="background:var(--info-lt);color:var(--info)"><?= avIcon('book') ?></div><div class="av-stat__num"><?= $totalCursos ?></div><div class="av-stat__lbl">Cursos</div><div class="av-stat__bar" style="background:var(--info)"></div></div>
     <div class="av-stat"><div class="av-stat__icon" style="background:var(--success-lt);color:var(--success)"><?= avIcon('check') ?></div><div class="av-stat__num"><?= $totalMatriculas ?></div><div class="av-stat__lbl">Matrículas activas</div><div class="av-stat__bar" style="background:var(--success)"></div></div>
+    <div class="av-stat"><div class="av-stat__icon" style="background:var(--ag100);color:var(--ag700)"><?= avIcon('download') ?></div><div class="av-stat__num"><?= $totalPagosPendientes ?></div><div class="av-stat__lbl">Pagos pendientes</div><div class="av-stat__bar" style="background:var(--ag500)"></div></div>
 </div>
 
 <div class="av-actions-grid" style="margin-bottom:22px">
@@ -60,6 +62,11 @@ require __DIR__ . '/../includes/header.php';
         <div class="av-action-card__icon" style="background:var(--danger-lt);color:var(--danger)"><?= avIcon('megaphone') ?></div>
         <strong>Avisos</strong>
         <span>Publicar anuncios generales del instituto.</span>
+    </a>
+    <a class="av-action-card" href="/admin/pagos.php">
+        <div class="av-action-card__icon" style="background:var(--ag100);color:var(--ag700)"><?= avIcon('check') ?></div>
+        <strong>Pagos</strong>
+        <span>Validar comprobantes y registrar pagos.</span>
     </a>
 </div>
 

@@ -14,7 +14,7 @@ $type = (string) ($_GET['type'] ?? '');
 $id = (int) ($_GET['id'] ?? 0);
 $user = currentUser();
 
-if (!in_array($type, ['contenido', 'entrega'], true) || $id <= 0) {
+if (!in_array($type, ['contenido', 'entrega', 'comprobante'], true) || $id <= 0) {
     http_response_code(400);
     die('Solicitud inválida.');
 }
@@ -54,7 +54,7 @@ if ($type === 'contenido') {
 
     $relativePath = $row['archivo_path'];
     $downloadName = $row['titulo'];
-} else {
+} elseif ($type === 'entrega') {
     $stmt = $pdo->prepare(
         'SELECT e.archivo_path, e.estudiante_id, t.titulo, c.docente_id
          FROM entregas e
@@ -86,6 +86,25 @@ if ($type === 'contenido') {
 
     $relativePath = $row['archivo_path'];
     $downloadName = $row['titulo'];
+} else {
+    $stmt = $pdo->prepare('SELECT comprobante_path, estudiante_id, numero_voucher FROM pagos WHERE id = :id');
+    $stmt->execute(['id' => $id]);
+    $row = $stmt->fetch();
+
+    if (!$row || !$row['comprobante_path']) {
+        http_response_code(404);
+        die('Archivo no encontrado.');
+    }
+
+    $allowed = $user['rol'] === 'administrador' || (int) $row['estudiante_id'] === (int) $user['id'];
+
+    if (!$allowed) {
+        http_response_code(403);
+        die('No tiene permisos para descargar este archivo.');
+    }
+
+    $relativePath = $row['comprobante_path'];
+    $downloadName = 'comprobante_' . ($row['numero_voucher'] ?: $id);
 }
 
 $fullPath = realpath(UPLOADS_PATH . '/' . $relativePath);
