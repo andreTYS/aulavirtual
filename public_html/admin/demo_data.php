@@ -48,13 +48,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = (string) ($_POST['action'] ?? '');
 
     if ($action === 'seed') {
-        demoCleanup($pdo);
+        try {
+            demoCleanup($pdo);
+        } catch (Throwable $e) {
+            error_log('demo_data.php: fallo al limpiar datos de demostración previos: ' . $e->getMessage());
+            setFlash('danger', 'No se pudo preparar la generación de datos de demostración: ' . $e->getMessage());
+            redirect('/admin/demo_data.php');
+        }
 
         $carreras = $pdo->query('SELECT id, nombre FROM carreras ORDER BY id')->fetchAll();
         if (!$carreras) {
             setFlash('danger', 'Primero crea al menos una carrera antes de generar datos de demostración.');
             redirect('/admin/demo_data.php');
         }
+
+        try {
+        $pdo->beginTransaction();
 
         // Periodo dedicado a demo (no toca el periodo activo real del instituto).
         $stmt = $pdo->prepare('SELECT id FROM periodos_academicos WHERE nombre = :nombre');
@@ -101,7 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             )->execute([
                 'nombre' => $nombre, 'apellidos' => $apellidos, 'username' => $username,
                 'email' => $username . '@demo.iestpbf.edu.pe', 'hash' => $hash,
-                'dni' => (string) (70000000 + $i), 'telefono' => '9510' . str_pad((string) $i, 5, '0', STR_PAD_LEFT),
+                'dni' => 'DEMO' . str_pad((string) ($i + 1), 4, '0', STR_PAD_LEFT), 'telefono' => '9510' . str_pad((string) $i, 5, '0', STR_PAD_LEFT),
                 'carrera_id' => $carrera['id'], 'apo_nombre' => 'Apoderado de ' . $nombre, 'apo_tel' => '9520' . str_pad((string) $i, 5, '0', STR_PAD_LEFT),
             ]);
             $estudianteIds[] = (int) $pdo->lastInsertId();
@@ -258,14 +267,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'contenido' => 'Aviso general de demostración: inicio de clases del periodo de práctica.',
             ]);
 
+        $pdo->commit();
+
         setFlash('success', sprintf(
             'Datos de demostración generados: %d docentes, %d estudiantes, %d cursos, %d sesiones, %d materiales, %d tareas, %d entregas, %d registros de asistencia. Contraseña de todas las cuentas demo: Demo1234!',
             count($docenteIds), count($estudianteIds), count($cursosInfo),
             $totalSesiones, $totalMateriales, $totalTareas, $totalEntregas, $totalAsistencias
         ));
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            demoCleanup($pdo); // no dejar datos a medias si algo falló
+            error_log('demo_data.php: fallo al generar datos de demostración: ' . $e->getMessage());
+            setFlash('danger', 'No se pudieron generar los datos de demostración: ' . $e->getMessage());
+        }
     } elseif ($action === 'cleanup') {
-        demoCleanup($pdo);
-        setFlash('success', 'Datos de demostración eliminados.');
+        try {
+            demoCleanup($pdo);
+            setFlash('success', 'Datos de demostración eliminados.');
+        } catch (Throwable $e) {
+            error_log('demo_data.php: fallo al eliminar datos de demostración: ' . $e->getMessage());
+            setFlash('danger', 'No se pudieron eliminar los datos de demostración: ' . $e->getMessage());
+        }
     }
     redirect('/admin/demo_data.php');
 }
