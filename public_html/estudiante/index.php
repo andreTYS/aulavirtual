@@ -62,7 +62,11 @@ require __DIR__ . '/../includes/header.php';
     </div>
 <?php endif; ?>
 
-<div class="av-page-header"><h2>Mis cursos</h2></div>
+<div class="av-page-header">
+    <h2>Mis cursos</h2>
+    <a href="/estudiante/historial.php" class="av-btn av-btn--outline"><?= avIcon('award') ?> Historial académico</a>
+    <a href="/mensajes.php" class="av-btn av-btn--outline"><?= avIcon('mail') ?> Mensajes</a>
+</div>
 
 <div class="av-course-grid" style="margin-bottom:22px">
     <?php foreach ($cursos as $c): ?>

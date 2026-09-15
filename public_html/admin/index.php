@@ -68,6 +68,16 @@ require __DIR__ . '/../includes/header.php';
         <strong>Pagos</strong>
         <span>Validar comprobantes y registrar pagos.</span>
     </a>
+    <a class="av-action-card" href="/admin/reportes.php">
+        <div class="av-action-card__icon" style="background:var(--t100);color:var(--t700)"><?= avIcon('chart') ?></div>
+        <strong>Reportes</strong>
+        <span>Estadísticas de matrícula, pagos y asistencia.</span>
+    </a>
+    <a class="av-action-card" href="/mensajes.php">
+        <div class="av-action-card__icon" style="background:var(--ab100);color:var(--ab700)"><?= avIcon('mail') ?></div>
+        <strong>Mensajes</strong>
+        <span>Comunicación directa con docentes y estudiantes.</span>
+    </a>
 </div>
 
 <div class="av-card">

@@ -161,7 +161,64 @@ function avIcon(string $name): string
         'check' => '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><path d="M22 4 12 14.01l-3-3"></path>',
         'download' => '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="M7 10l5 5 5-5"></path><path d="M12 15V3"></path>',
         'logout' => '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="M16 17l5-5-5-5"></path><path d="M21 12H9"></path>',
+        'mail' => '<rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m22 6-10 7L2 6"></path>',
+        'chart' => '<path d="M3 3v18h18"></path><path d="M18 17V9"></path><path d="M13 17V5"></path><path d="M8 17v-3"></path>',
+        'user' => '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>',
+        'award' => '<circle cx="12" cy="8" r="6"></circle><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"></path>',
     ];
     $inner = $icons[$name] ?? '';
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' . $inner . '</svg>';
+}
+
+/**
+ * Cantidad de mensajes no leidos para un usuario (badge en el sidebar).
+ */
+function unreadMensajesCount(PDO $pdo, int $userId): int
+{
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM mensajes WHERE destinatario_id = :id AND leido = 0');
+    $stmt->execute(['id' => $userId]);
+    return (int) $stmt->fetchColumn();
+}
+
+/**
+ * Lista de contactos con los que un usuario puede intercambiar mensajes,
+ * segun su rol: el administrador puede escribir a cualquiera; docente y
+ * estudiante solo a las personas con quienes comparten al menos un curso.
+ */
+function mensajesContactos(PDO $pdo, array $user): array
+{
+    if ($user['rol'] === 'administrador') {
+        $stmt = $pdo->prepare(
+            "SELECT id, nombre, apellidos, rol FROM usuarios WHERE id != :id ORDER BY rol, apellidos, nombre"
+        );
+        $stmt->execute(['id' => $user['id']]);
+        return $stmt->fetchAll();
+    }
+
+    if ($user['rol'] === 'docente') {
+        $stmt = $pdo->prepare(
+            "SELECT DISTINCT u.id, u.nombre, u.apellidos, u.rol
+             FROM usuarios u
+             JOIN matriculas m ON m.estudiante_id = u.id AND m.estado = 'activo'
+             JOIN cursos c ON c.id = m.curso_id
+             WHERE c.docente_id = :id
+             ORDER BY u.apellidos, u.nombre"
+        );
+        $stmt->execute(['id' => $user['id']]);
+        return $stmt->fetchAll();
+    }
+
+    if ($user['rol'] === 'estudiante') {
+        $stmt = $pdo->prepare(
+            "SELECT DISTINCT u.id, u.nombre, u.apellidos, u.rol
+             FROM usuarios u
+             JOIN cursos c ON c.docente_id = u.id
+             JOIN matriculas m ON m.curso_id = c.id AND m.estudiante_id = :id AND m.estado = 'activo'
+             ORDER BY u.apellidos, u.nombre"
+        );
+        $stmt->execute(['id' => $user['id']]);
+        return $stmt->fetchAll();
+    }
+
+    return [];
 }
