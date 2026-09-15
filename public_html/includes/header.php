@@ -8,6 +8,7 @@ declare(strict_types=1);
 
 $user = currentUser();
 $pageTitle = $pageTitle ?? APP_NAME;
+$unreadMensajes = $user ? unreadMensajesCount($pdo, (int) $user['id']) : 0;
 
 function navActive(string $path): string
 {
@@ -40,6 +41,8 @@ function navActive(string $path): string
                 <div class="av-nav__group">Gestión</div>
                 <a class="av-nav__item<?= navActive('/admin/index.php') ?>" href="/admin/index.php"><?= avIcon('grid') ?> Panel</a>
                 <a class="av-nav__item<?= navActive('/admin/usuarios.php') . navActive('/admin/usuario_form.php') ?>" href="/admin/usuarios.php"><?= avIcon('users') ?> Usuarios</a>
+                <a class="av-nav__item<?= (($_GET['rol'] ?? '') === 'docente') ? ' active' : '' ?>" href="/admin/usuarios.php?rol=docente"><?= avIcon('graduation') ?> Docentes</a>
+                <a class="av-nav__item<?= (($_GET['rol'] ?? '') === 'estudiante') ? ' active' : '' ?>" href="/admin/usuarios.php?rol=estudiante"><?= avIcon('users') ?> Estudiantes</a>
                 <a class="av-nav__item<?= navActive('/admin/cursos.php') . navActive('/admin/curso_form.php') . navActive('/admin/matriculas.php') ?>" href="/admin/cursos.php"><?= avIcon('book') ?> Cursos</a>
                 <a class="av-nav__item<?= navActive('/admin/carreras.php') ?>" href="/admin/carreras.php"><?= avIcon('graduation') ?> Carreras</a>
                 <a class="av-nav__item<?= navActive('/admin/periodos.php') ?>" href="/admin/periodos.php"><?= avIcon('calendar') ?> Periodos académicos</a>
@@ -48,18 +51,34 @@ function navActive(string $path): string
                 <a class="av-nav__item<?= navActive('/admin/conceptos_pago.php') ?>" href="/admin/conceptos_pago.php"><?= avIcon('download') ?> Conceptos de pago</a>
                 <div class="av-nav__group">Comunicación</div>
                 <a class="av-nav__item<?= navActive('/admin/avisos.php') ?>" href="/admin/avisos.php"><?= avIcon('megaphone') ?> Avisos</a>
+                <a class="av-nav__item<?= navActive('/mensajes.php') ?>" href="/mensajes.php"><?= avIcon('mail') ?> Mensajes<?php if ($unreadMensajes > 0): ?><span class="av-nav__badge"><?= $unreadMensajes ?></span><?php endif; ?></a>
+                <div class="av-nav__group">Reportes</div>
+                <a class="av-nav__item<?= navActive('/admin/reportes.php') ?>" href="/admin/reportes.php"><?= avIcon('chart') ?> Reportes y estadísticas</a>
+                <div class="av-nav__group">Mi cuenta</div>
+                <a class="av-nav__item<?= navActive('/perfil.php') ?>" href="/perfil.php"><?= avIcon('user') ?> Mi perfil</a>
                 <div class="av-nav__group">Sistema</div>
                 <a class="av-nav__item<?= navActive('/admin/demo_data.php') ?>" href="/admin/demo_data.php"><?= avIcon('star') ?> Datos de demostración</a>
             <?php elseif ($user['rol'] === 'docente'): ?>
                 <div class="av-nav__group">Docencia</div>
                 <a class="av-nav__item<?= navActive('/docente/index.php') ?>" href="/docente/index.php"><?= avIcon('book') ?> Mis cursos</a>
                 <a class="av-nav__item<?= navActive('/docente/calendario.php') ?>" href="/docente/calendario.php"><?= avIcon('calendar') ?> Calendario</a>
+                <a class="av-nav__item<?= navActive('/docente/libro_calificaciones.php') ?>" href="/docente/libro_calificaciones.php"><?= avIcon('award') ?> Libro de calificaciones</a>
+                <div class="av-nav__group">Comunicación</div>
+                <a class="av-nav__item<?= navActive('/mensajes.php') ?>" href="/mensajes.php"><?= avIcon('mail') ?> Mensajes<?php if ($unreadMensajes > 0): ?><span class="av-nav__badge"><?= $unreadMensajes ?></span><?php endif; ?></a>
+                <div class="av-nav__group">Mi cuenta</div>
+                <a class="av-nav__item<?= navActive('/perfil.php') ?>" href="/perfil.php"><?= avIcon('user') ?> Mi perfil</a>
             <?php elseif ($user['rol'] === 'estudiante'): ?>
                 <div class="av-nav__group">Aprendizaje</div>
                 <a class="av-nav__item<?= navActive('/estudiante/index.php') ?>" href="/estudiante/index.php"><?= avIcon('book') ?> Mis cursos</a>
                 <a class="av-nav__item<?= navActive('/estudiante/calendario.php') ?>" href="/estudiante/calendario.php"><?= avIcon('calendar') ?> Calendario</a>
                 <a class="av-nav__item<?= navActive('/estudiante/calificaciones.php') ?>" href="/estudiante/calificaciones.php"><?= avIcon('star') ?> Calificaciones</a>
+                <a class="av-nav__item<?= navActive('/estudiante/historial.php') . navActive('/estudiante/constancia.php') ?>" href="/estudiante/historial.php"><?= avIcon('award') ?> Historial académico</a>
+                <div class="av-nav__group">Finanzas</div>
                 <a class="av-nav__item<?= navActive('/estudiante/pagos.php') ?>" href="/estudiante/pagos.php"><?= avIcon('check') ?> Mis pagos</a>
+                <div class="av-nav__group">Comunicación</div>
+                <a class="av-nav__item<?= navActive('/mensajes.php') ?>" href="/mensajes.php"><?= avIcon('mail') ?> Mensajes<?php if ($unreadMensajes > 0): ?><span class="av-nav__badge"><?= $unreadMensajes ?></span><?php endif; ?></a>
+                <div class="av-nav__group">Mi cuenta</div>
+                <a class="av-nav__item<?= navActive('/perfil.php') ?>" href="/perfil.php"><?= avIcon('user') ?> Mi perfil</a>
             <?php endif; ?>
         </nav>
         <div class="av-sidebar__footer">

@@ -298,6 +298,44 @@ img{max-width:100%}
 }
 
 /* ══════════════════════════════════════
+   MENSAJERÍA
+══════════════════════════════════════ */
+.av-msg-layout{display:grid;grid-template-columns:260px 1fr;gap:16px;height:calc(100vh - 160px);min-height:420px}
+.av-msg-contacts{background:var(--white);border:1px solid var(--n200);border-radius:var(--radius);overflow-y:auto;padding:6px}
+.av-msg-contact{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;border-radius:var(--radius-sm);font-size:.85rem;font-weight:700;color:var(--n700);position:relative}
+.av-msg-contact:hover{background:var(--n100)}
+.av-msg-contact.active{background:var(--ab100);color:var(--ab700)}
+.av-msg-contact__name{flex:1}
+.av-msg-dot{background:var(--danger);color:#fff;font-size:.68rem;font-weight:800;min-width:18px;height:18px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;padding:0 5px}
+.av-msg-thread{background:var(--white);border:1px solid var(--n200);border-radius:var(--radius);display:flex;flex-direction:column;overflow:hidden}
+.av-msg-thread__head{padding:14px 18px;border-bottom:1px solid var(--n200);display:flex;align-items:center;gap:10px}
+.av-msg-thread__body{flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.av-msg-bubble{max-width:70%;background:var(--n100);border-radius:var(--radius);padding:10px 14px;align-self:flex-start}
+.av-msg-bubble.own{background:var(--ab100);align-self:flex-end}
+.av-msg-bubble p{font-size:.88rem;color:var(--n800);white-space:pre-wrap}
+.av-msg-bubble span{display:block;font-size:.65rem;color:var(--n500);margin-top:4px;text-align:right}
+.av-msg-thread__form{display:flex;gap:10px;padding:14px 18px;border-top:1px solid var(--n200)}
+.av-msg-thread__form textarea{flex:1;resize:none;min-height:44px;padding:10px 13px;border:1.5px solid var(--n200);border-radius:var(--radius-sm);font-family:inherit;font-size:.88rem}
+@media(max-width:800px){
+  .av-msg-layout{grid-template-columns:1fr;height:auto}
+  .av-msg-contacts{max-height:200px}
+}
+
+/* Nav item unread dot */
+.av-nav__badge{margin-left:auto;background:var(--danger);color:#fff;font-size:.62rem;font-weight:800;min-width:16px;height:16px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;padding:0 4px}
+
+/* ══════════════════════════════════════
+   BARRAS DE REPORTE (CSS puro, sin librerias)
+══════════════════════════════════════ */
+.av-barchart{display:flex;flex-direction:column;gap:10px}
+.av-barchart__row{display:grid;grid-template-columns:140px 1fr 60px;align-items:center;gap:10px;font-size:.82rem}
+.av-barchart__label{color:var(--n700);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.av-barchart__track{background:var(--n100);border-radius:999px;height:14px;overflow:hidden}
+.av-barchart__fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#60a5fa,#3b82f6)}
+.av-barchart__value{color:var(--n600);font-weight:700;text-align:right}
+@media(max-width:600px){.av-barchart__row{grid-template-columns:100px 1fr 50px}}
+
+/* ══════════════════════════════════════
    MISC
 ══════════════════════════════════════ */
 .av-grade-box{background:var(--success-lt);border-radius:var(--radius);padding:16px 18px;color:#166534;font-size:.88rem}
