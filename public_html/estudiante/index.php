@@ -56,8 +56,8 @@ require __DIR__ . '/../includes/header.php';
                 <?php if (isSessionToday($proxima['fecha'])): ?><strong>&middot; ¡Es hoy!</strong><?php endif; ?>
             </p>
         </div>
-        <?php if (isSessionToday($proxima['fecha']) && $proxima['link_zoom']): ?>
-            <a href="<?= e($proxima['link_zoom']) ?>" target="_blank" rel="noopener" class="av-btn av-btn--white">Ingresar a clase</a>
+        <?php if (isSessionToday($proxima['fecha']) && $proxima['link_meet']): ?>
+            <a href="<?= e($proxima['link_meet']) ?>" target="_blank" rel="noopener" class="av-btn av-btn--white">Ingresar a clase</a>
         <?php endif; ?>
     </div>
 <?php endif; ?>

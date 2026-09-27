@@ -3,6 +3,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/includes/google_calendar.php';
 requireLogin();
 
 $userId = (int) $_SESSION['user_id'];
@@ -60,6 +61,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('/perfil.php');
     }
 
+    if ($accion === 'google_desconectar' && $rol === 'docente') {
+        googleDisconnect($pdo, $userId);
+        setFlash('success', 'Se desconectó su cuenta de Google. Las próximas sesiones deberán llevar el enlace de Meet manualmente.');
+        redirect('/perfil.php');
+    }
+
     if ($accion === 'password') {
         $actual = (string) ($_POST['password_actual'] ?? '');
         $nueva = (string) ($_POST['password_nueva'] ?? '');
@@ -107,6 +114,25 @@ require __DIR__ . '/includes/header.php';
         <button type="submit" class="av-btn av-btn--primary">Guardar cambios</button>
     </form>
 </div>
+
+<?php if ($rol === 'docente'): ?>
+<div class="av-card" style="margin-bottom:18px">
+    <h3>Integración con Google Calendar</h3>
+    <?php if (!googleIsConfigured()): ?>
+        <p class="av-text-muted">La integración con Google Calendar aún no está configurada en el servidor. Contacte al administrador del sistema.</p>
+    <?php elseif (googleIsConnected($pdo, $userId)): ?>
+        <p style="margin-bottom:12px"><span class="av-badge av-badge--green">Conectado</span> Su cuenta educativa de Google está conectada: al programar una sesión, el enlace de Google Meet se genera automáticamente en su Google Calendar.</p>
+        <form method="post" onsubmit="return confirm('¿Desconectar su cuenta de Google? Las próximas sesiones deberán llevar el enlace de Meet manualmente.');">
+            <?= csrfField() ?>
+            <input type="hidden" name="accion" value="google_desconectar">
+            <button type="submit" class="av-btn av-btn--outline av-btn--sm">Desconectar cuenta de Google</button>
+        </form>
+    <?php else: ?>
+        <p style="margin-bottom:12px"><span class="av-badge av-badge--gray">No conectado</span> Conecte su cuenta educativa de Google para que el sistema cree automáticamente la videollamada de Meet al programar cada sesión.</p>
+        <a href="/google_oauth_start.php" class="av-btn av-btn--primary av-btn--sm"><?= avIcon('video') ?> Conectar con Google</a>
+    <?php endif; ?>
+</div>
+<?php endif; ?>
 
 <div class="av-card">
     <h3>Cambiar contraseña</h3>

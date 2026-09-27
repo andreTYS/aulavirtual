@@ -166,12 +166,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             foreach ($sesionesInfo as $s) {
                 $fecha = date('Y-m-d', strtotime($s['dias'] . ' days'));
                 $pdo->prepare(
-                    'INSERT INTO sesiones (curso_id, fecha, hora_inicio, duracion_min, tema, link_zoom, link_grabacion, estado)
-                     VALUES (:curso_id, :fecha, :hora_inicio, 90, :tema, :link_zoom, :link_grabacion, :estado)'
+                    'INSERT INTO sesiones (curso_id, fecha, hora_inicio, duracion_min, tema, link_meet, link_grabacion, estado)
+                     VALUES (:curso_id, :fecha, :hora_inicio, 90, :tema, :link_meet, :link_grabacion, :estado)'
                 )->execute([
                     'curso_id' => $cursoId, 'fecha' => $fecha, 'hora_inicio' => '18:00:00', 'tema' => $s['tema'],
-                    'link_zoom' => 'https://zoom.us/j/demo' . $cursoId . abs($s['dias']),
-                    'link_grabacion' => $s['estado'] === 'realizada' ? 'https://zoom.us/rec/demo' . $cursoId . abs($s['dias']) : null,
+                    'link_meet' => 'https://meet.google.com/demo-' . $cursoId . '-' . abs($s['dias']),
+                    'link_grabacion' => $s['estado'] === 'realizada' ? 'https://drive.google.com/demo-rec-' . $cursoId . abs($s['dias']) : null,
                     'estado' => $s['estado'],
                 ]);
                 $sesionIds[] = (int) $pdo->lastInsertId();
@@ -304,7 +304,7 @@ require __DIR__ . '/../includes/header.php';
 <div class="av-card" style="max-width:720px">
     <h3>¿Qué hace esto?</h3>
     <p style="font-size:.88rem;color:var(--n700);line-height:1.7">
-        Crea 4 docentes, 12 estudiantes, 5 cursos (con sesiones de Zoom pasadas/hoy/futuras,
+        Crea 4 docentes, 12 estudiantes, 5 cursos (con sesiones de Google Meet pasadas/hoy/futuras,
         materiales, tareas calificadas, asistencia y avisos) para poder mostrar el sistema
         funcionando de punta a punta. Todo queda identificado con el prefijo
         <strong><?= e(DEMO_CURSO_PREFIX) ?></strong> en cursos/avisos y

@@ -1,6 +1,6 @@
 -- ============================================================
 -- Aula Virtual - IESTP Benjamin Franklin (Moquegua, Peru)
--- Esquema de base de datos - v6 (mensajeria interna incluida)
+-- Esquema de base de datos - v7 (integracion con Google Meet)
 -- MySQL / MariaDB 10.11+
 -- ============================================================
 
@@ -101,10 +101,14 @@ CREATE TABLE IF NOT EXISTS matriculas (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
--- sesiones: clase programada de un curso (presencial o via Zoom).
--- El link de Zoom solo se muestra activo al estudiante el mismo
--- dia de la sesion (regla de negocio validada en la capa de
--- aplicacion, no en la base de datos).
+-- sesiones: clase programada de un curso (presencial o via Google
+-- Meet). El link de Meet solo se muestra activo al estudiante el
+-- mismo dia de la sesion (regla de negocio validada en la capa de
+-- aplicacion, no en la base de datos). `google_event_id` identifica
+-- el evento de Google Calendar creado con la cuenta educativa del
+-- docente (via OAuth2), para poder actualizarlo si cambia la fecha;
+-- queda NULL si el docente no conecto su cuenta y pego el enlace
+-- manualmente.
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS sesiones (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -113,7 +117,8 @@ CREATE TABLE IF NOT EXISTS sesiones (
     hora_inicio TIME NOT NULL,
     duracion_min SMALLINT UNSIGNED NOT NULL DEFAULT 90,
     tema VARCHAR(200) NOT NULL,
-    link_zoom VARCHAR(500) NULL,
+    link_meet VARCHAR(500) NULL,
+    google_event_id VARCHAR(255) NULL,
     link_grabacion VARCHAR(500) NULL,
     estado ENUM('programada','realizada','cancelada') NOT NULL DEFAULT 'programada',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -284,6 +289,25 @@ CREATE TABLE IF NOT EXISTS mensajes (
     KEY idx_mensajes_destinatario (destinatario_id, leido),
     KEY idx_mensajes_remitente (remitente_id),
     KEY idx_mensajes_conversacion (remitente_id, destinatario_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- google_tokens: credenciales OAuth2 de la cuenta educativa de
+-- Google de cada docente, usadas para crear/actualizar eventos de
+-- Google Calendar con videollamada de Meet en su nombre. El
+-- refresh_token no caduca (salvo revocacion manual) y permite
+-- renovar el access_token sin pedirle al docente que vuelva a
+-- autorizar cada hora.
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS google_tokens (
+    usuario_id INT UNSIGNED PRIMARY KEY,
+    access_token TEXT NOT NULL,
+    refresh_token TEXT NOT NULL,
+    expira_en TIMESTAMP NOT NULL,
+    scope VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_google_tokens_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;
