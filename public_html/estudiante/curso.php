@@ -122,8 +122,8 @@ require __DIR__ . '/../includes/header.php';
                             <div class="content-desc">El acceso se habilita el mismo día de la sesión.</div>
                         <?php endif; ?>
                     </div>
-                    <?php if ($esHoy && $s['estado'] !== 'cancelada' && $s['link_zoom']): ?>
-                        <a href="<?= e($s['link_zoom']) ?>" target="_blank" rel="noopener" class="av-btn av-btn--primary av-btn--sm">Ingresar a clase</a>
+                    <?php if ($esHoy && $s['estado'] !== 'cancelada' && $s['link_meet']): ?>
+                        <a href="<?= e($s['link_meet']) ?>" target="_blank" rel="noopener" class="av-btn av-btn--primary av-btn--sm">Ingresar a clase</a>
                     <?php endif; ?>
                 </div>
             <?php endforeach; ?>

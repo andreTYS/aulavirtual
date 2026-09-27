@@ -36,3 +36,12 @@ define('ALLOWED_ENTREGA_EXT', ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx
 define('ALLOWED_COMPROBANTE_EXT', ['pdf', 'jpg', 'jpeg', 'png']);
 
 define('APP_NAME', 'Aula Virtual - IESTP Benjamín Franklin');
+
+// Credenciales OAuth2 de Google Cloud (cuenta educativa del instituto),
+// usadas para que cada docente conecte su Google Calendar y el sistema
+// pueda crear videollamadas de Google Meet en su nombre. Se dejan vacias
+// por defecto: mientras no esten configuradas, el sistema sigue
+// funcionando con el enlace de Meet pegado manualmente por el docente.
+define('GOOGLE_CLIENT_ID', getenv('GOOGLE_CLIENT_ID') ?: '');
+define('GOOGLE_CLIENT_SECRET', getenv('GOOGLE_CLIENT_SECRET') ?: '');
+define('GOOGLE_REDIRECT_URI', getenv('GOOGLE_REDIRECT_URI') ?: 'https://aulavirtual.iestpbf.edu.pe/google_oauth_callback.php');

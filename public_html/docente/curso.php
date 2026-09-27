@@ -3,6 +3,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../includes/google_calendar.php';
 requireRole('docente');
 
 $docenteId = (int) $_SESSION['user_id'];
@@ -25,23 +26,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $hora = (string) ($_POST['hora_inicio'] ?? '');
         $duracion = (int) ($_POST['duracion_min'] ?? 90);
         $tema = trim((string) ($_POST['tema'] ?? ''));
-        $linkZoom = trim((string) ($_POST['link_zoom'] ?? ''));
+        $linkMeetManual = trim((string) ($_POST['link_meet'] ?? ''));
 
         if ($fecha === '' || $hora === '' || $tema === '') {
             setFlash('danger', 'Complete fecha, hora y tema de la sesión.');
-        } elseif ($linkZoom !== '' && !filter_var($linkZoom, FILTER_VALIDATE_URL)) {
-            setFlash('danger', 'El link de Zoom no es una URL válida.');
+        } elseif ($linkMeetManual !== '' && !filter_var($linkMeetManual, FILTER_VALIDATE_URL)) {
+            setFlash('danger', 'El link de Google Meet no es una URL válida.');
         } else {
+            $duracion = $duracion > 0 ? $duracion : 90;
             $ins = $pdo->prepare(
-                'INSERT INTO sesiones (curso_id, fecha, hora_inicio, duracion_min, tema, link_zoom)
-                 VALUES (:curso_id, :fecha, :hora_inicio, :duracion_min, :tema, :link_zoom)'
+                'INSERT INTO sesiones (curso_id, fecha, hora_inicio, duracion_min, tema)
+                 VALUES (:curso_id, :fecha, :hora_inicio, :duracion_min, :tema)'
             );
             $ins->execute([
                 'curso_id' => $cursoId, 'fecha' => $fecha, 'hora_inicio' => $hora,
-                'duracion_min' => $duracion > 0 ? $duracion : 90, 'tema' => $tema,
-                'link_zoom' => $linkZoom !== '' ? $linkZoom : null,
+                'duracion_min' => $duracion, 'tema' => $tema,
             ]);
-            setFlash('success', 'Sesión programada.');
+            $sesionId = (int) $pdo->lastInsertId();
+
+            $linkMeet = $linkMeetManual !== '' ? $linkMeetManual : null;
+            $googleEventId = null;
+
+            if (googleIsConnected($pdo, $docenteId)) {
+                $creado = googleCreateMeetEvent($pdo, $docenteId, $curso['nombre'], [
+                    'fecha' => $fecha, 'hora_inicio' => $hora, 'duracion_min' => $duracion, 'tema' => $tema,
+                ]);
+                if ($creado) {
+                    $linkMeet = $creado['meet_link'];
+                    $googleEventId = $creado['event_id'];
+                    setFlash('success', 'Sesión programada y videollamada de Google Meet creada automáticamente.');
+                } else {
+                    setFlash('danger', 'La sesión se programó, pero no se pudo crear la videollamada de Google Meet automáticamente. Puede editar la sesión y pegar un enlace manualmente, o revisar la conexión con Google en Mi perfil.');
+                }
+            } else {
+                setFlash('success', 'Sesión programada.' . ($linkMeet === null ? ' Conecte su cuenta de Google en Mi perfil para generar el enlace de Meet automáticamente.' : ''));
+            }
+
+            $upd = $pdo->prepare('UPDATE sesiones SET link_meet = :link_meet, google_event_id = :google_event_id WHERE id = :id');
+            $upd->execute(['link_meet' => $linkMeet, 'google_event_id' => $googleEventId, 'id' => $sesionId]);
         }
     } elseif ($action === 'update_sesion') {
         $sesionId = (int) ($_POST['sesion_id'] ?? 0);
@@ -49,28 +71,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $hora = (string) ($_POST['hora_inicio'] ?? '');
         $duracion = (int) ($_POST['duracion_min'] ?? 90);
         $tema = trim((string) ($_POST['tema'] ?? ''));
-        $linkZoom = trim((string) ($_POST['link_zoom'] ?? ''));
+        $linkMeetManual = trim((string) ($_POST['link_meet'] ?? ''));
         $linkGrabacion = trim((string) ($_POST['link_grabacion'] ?? ''));
 
-        if ($fecha === '' || $hora === '' || $tema === '') {
+        $actual = $pdo->prepare('SELECT google_event_id FROM sesiones WHERE id = :id AND curso_id = :curso_id');
+        $actual->execute(['id' => $sesionId, 'curso_id' => $cursoId]);
+        $actual = $actual->fetch();
+
+        if (!$actual) {
+            setFlash('danger', 'Sesión no encontrada.');
+        } elseif ($fecha === '' || $hora === '' || $tema === '') {
             setFlash('danger', 'Complete fecha, hora y tema de la sesión.');
-        } elseif ($linkZoom !== '' && !filter_var($linkZoom, FILTER_VALIDATE_URL)) {
-            setFlash('danger', 'El link de Zoom no es una URL válida.');
+        } elseif ($linkMeetManual !== '' && !filter_var($linkMeetManual, FILTER_VALIDATE_URL)) {
+            setFlash('danger', 'El link de Google Meet no es una URL válida.');
         } elseif ($linkGrabacion !== '' && !filter_var($linkGrabacion, FILTER_VALIDATE_URL)) {
             setFlash('danger', 'El link de grabación no es una URL válida.');
         } else {
+            $duracion = $duracion > 0 ? $duracion : 90;
+            $googleEventId = $actual['google_event_id'];
+            $linkMeet = $linkMeetManual !== '' ? $linkMeetManual : null;
+            $mensajeExtra = '';
+
+            if ($googleEventId) {
+                // La sesión ya tiene un evento de Google Calendar: se conserva
+                // el enlace de Meet existente (no se reemplaza por el manual)
+                // y solo se sincroniza la fecha/hora/tema del evento.
+                $stmtLink = $pdo->prepare('SELECT link_meet FROM sesiones WHERE id = :id');
+                $stmtLink->execute(['id' => $sesionId]);
+                $linkMeet = $stmtLink->fetchColumn() ?: $linkMeet;
+
+                if (!googleUpdateMeetEvent($pdo, $docenteId, $googleEventId, $curso['nombre'], [
+                    'fecha' => $fecha, 'hora_inicio' => $hora, 'duracion_min' => $duracion, 'tema' => $tema,
+                ])) {
+                    $mensajeExtra = ' No se pudo actualizar el evento de Google Calendar con la nueva fecha/hora; revíselo manualmente en su Google Calendar.';
+                }
+            }
+
             $upd = $pdo->prepare(
                 'UPDATE sesiones SET fecha=:fecha, hora_inicio=:hora_inicio, duracion_min=:duracion_min,
-                 tema=:tema, link_zoom=:link_zoom, link_grabacion=:link_grabacion
+                 tema=:tema, link_meet=:link_meet, link_grabacion=:link_grabacion
                  WHERE id=:id AND curso_id=:curso_id'
             );
             $upd->execute([
-                'fecha' => $fecha, 'hora_inicio' => $hora, 'duracion_min' => $duracion > 0 ? $duracion : 90,
-                'tema' => $tema, 'link_zoom' => $linkZoom !== '' ? $linkZoom : null,
+                'fecha' => $fecha, 'hora_inicio' => $hora, 'duracion_min' => $duracion,
+                'tema' => $tema, 'link_meet' => $linkMeet,
                 'link_grabacion' => $linkGrabacion !== '' ? $linkGrabacion : null,
                 'id' => $sesionId, 'curso_id' => $cursoId,
             ]);
-            setFlash('success', 'Sesión actualizada.');
+            setFlash($mensajeExtra === '' ? 'success' : 'danger', 'Sesión actualizada.' . $mensajeExtra);
         }
     } elseif ($action === 'cancelar_sesion') {
         $sesionId = (int) ($_POST['sesion_id'] ?? 0);
@@ -233,6 +281,8 @@ $comentarios = $pdo->prepare(
 $comentarios->execute(['curso_id' => $cursoId]);
 $comentarios = $comentarios->fetchAll();
 
+$googleConectado = googleIsConnected($pdo, $docenteId);
+
 $pageTitle = $curso['nombre'];
 require __DIR__ . '/../includes/header.php';
 ?>
@@ -256,6 +306,14 @@ require __DIR__ . '/../includes/header.php';
     <div class="av-tabpanel active" id="tab-sesiones">
         <div class="av-card" style="margin-bottom:16px">
             <h3>+ Nueva sesión</h3>
+            <?php if ($googleConectado): ?>
+                <p class="av-text-muted" style="margin-bottom:12px"><?= avIcon('video') ?> Su cuenta de Google está conectada: el enlace de Meet se generará automáticamente al guardar.</p>
+            <?php else: ?>
+                <p class="av-text-muted" style="margin-bottom:12px">
+                    <a href="/perfil.php" style="color:var(--ab600);font-weight:600">Conecte su cuenta educativa de Google en Mi perfil</a>
+                    para generar el enlace de Meet automáticamente, o péguelo manualmente abajo.
+                </p>
+            <?php endif; ?>
             <form method="post">
                 <?= csrfField() ?>
                 <input type="hidden" name="action" value="create_sesion">
@@ -266,7 +324,9 @@ require __DIR__ . '/../includes/header.php';
                     <div class="av-fg"><label>Duración (min)</label><input type="number" name="duracion_min" value="90" min="15" step="5"></div>
                     <div class="av-fg"><label>Tema</label><input type="text" name="tema" required></div>
                 </div>
-                <div class="av-fg"><label>Link de Zoom (opcional)</label><input type="url" name="link_zoom" placeholder="https://zoom.us/j/..."></div>
+                <?php if (!$googleConectado): ?>
+                    <div class="av-fg"><label>Link de Google Meet (opcional)</label><input type="url" name="link_meet" placeholder="https://meet.google.com/..."></div>
+                <?php endif; ?>
                 <button class="av-btn av-btn--primary" type="submit">Programar sesión</button>
             </form>
         </div>
@@ -296,7 +356,16 @@ require __DIR__ . '/../includes/header.php';
                         <div class="av-fg"><label>Hora de inicio</label><input type="time" name="hora_inicio" value="<?= e(substr($s['hora_inicio'], 0, 5)) ?>" required></div>
                         <div class="av-fg"><label>Duración (min)</label><input type="number" name="duracion_min" value="<?= (int) $s['duracion_min'] ?>" min="15" step="5"></div>
                         <div class="av-fg"><label>Tema</label><input type="text" name="tema" value="<?= e($s['tema']) ?>" required></div>
-                        <div class="av-fg"><label>Link de Zoom</label><input type="url" name="link_zoom" value="<?= e($s['link_zoom'] ?? '') ?>" placeholder="https://zoom.us/j/..."></div>
+                        <?php if ($s['google_event_id']): ?>
+                            <div class="av-fg">
+                                <label>Link de Google Meet</label>
+                                <input type="url" value="<?= e($s['link_meet'] ?? '') ?>" disabled>
+                                <input type="hidden" name="link_meet" value="<?= e($s['link_meet'] ?? '') ?>">
+                            </div>
+                            <p class="av-text-muted" style="grid-column:1/-1;margin-top:-8px;margin-bottom:12px">Generado automáticamente por Google Calendar; se actualiza solo al cambiar fecha/hora.</p>
+                        <?php else: ?>
+                            <div class="av-fg"><label>Link de Google Meet</label><input type="url" name="link_meet" value="<?= e($s['link_meet'] ?? '') ?>" placeholder="https://meet.google.com/..."></div>
+                        <?php endif; ?>
                         <div class="av-fg"><label>Link de grabación</label><input type="url" name="link_grabacion" value="<?= e($s['link_grabacion'] ?? '') ?>" placeholder="https://..."></div>
                         <div style="grid-column:1/-1"><button class="av-btn av-btn--secondary av-btn--sm" type="submit">Guardar cambios</button></div>
                     </form>

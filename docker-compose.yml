@@ -3,6 +3,13 @@ services:
     image: php-apache-custom
     container_name: aulavirtual-web
     restart: unless-stopped
+    environment:
+      # Credenciales OAuth2 de Google Cloud para la integracion con Google
+      # Meet (ver README/instrucciones de despliegue). Mientras queden
+      # vacias, el sistema sigue funcionando con enlace de Meet manual.
+      GOOGLE_CLIENT_ID: ""
+      GOOGLE_CLIENT_SECRET: ""
+      GOOGLE_REDIRECT_URI: "https://aulavirtual.iestpbf.edu.pe/google_oauth_callback.php"
     volumes:
       - /opt/sites/aulavirtual.iestpbf.edu.pe/public_html:/var/www/html
     labels:
