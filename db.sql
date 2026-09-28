@@ -1,6 +1,6 @@
 -- ============================================================
 -- Aula Virtual - IESTP Benjamin Franklin (Moquegua, Peru)
--- Esquema de base de datos - v7 (integracion con Google Meet)
+-- Esquema de base de datos - v8 (notas ponderadas, foro y calificar sin entrega)
 -- MySQL / MariaDB 10.11+
 -- ============================================================
 
@@ -148,7 +148,9 @@ CREATE TABLE IF NOT EXISTS contenidos (
 
 -- ------------------------------------------------------------
 -- tareas: asignaciones creadas por el docente, ligadas al curso y
--- opcionalmente a una sesion especifica.
+-- opcionalmente a una sesion especifica. `categoria` clasifica la
+-- tarea y `peso` es su ponderacion relativa dentro del promedio del
+-- curso (una tarea con peso 2 vale el doble que una con peso 1).
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS tareas (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -156,6 +158,8 @@ CREATE TABLE IF NOT EXISTS tareas (
     sesion_id INT UNSIGNED NULL,
     titulo VARCHAR(200) NOT NULL,
     descripcion TEXT NULL,
+    categoria ENUM('practica','examen','participacion','trabajo') NOT NULL DEFAULT 'practica',
+    peso DECIMAL(5,2) NOT NULL DEFAULT 1.00,
     fecha_limite DATETIME NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_tareas_curso FOREIGN KEY (curso_id) REFERENCES cursos(id) ON DELETE CASCADE,
@@ -166,14 +170,16 @@ CREATE TABLE IF NOT EXISTS tareas (
 -- ------------------------------------------------------------
 -- entregas: archivo subido por el estudiante para una tarea, con
 -- calificacion (escala vigesimal peruana 0-20) y comentario del
--- docente.
+-- docente. `archivo_path`/`fecha_entrega` quedan NULL cuando el
+-- docente califica directamente sin que exista una entrega digital
+-- (ej. examen oral o participacion en clase).
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS entregas (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     tarea_id INT UNSIGNED NOT NULL,
     estudiante_id INT UNSIGNED NOT NULL,
-    archivo_path VARCHAR(500) NOT NULL,
-    fecha_entrega TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    archivo_path VARCHAR(500) NULL,
+    fecha_entrega TIMESTAMP NULL,
     calificacion DECIMAL(4,2) NULL,
     comentario TEXT NULL,
     fecha_calificacion TIMESTAMP NULL,
@@ -218,18 +224,23 @@ CREATE TABLE IF NOT EXISTS avisos (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
--- comentarios: muro de comentarios dentro de un curso, visible
--- para el docente del curso y sus estudiantes matriculados.
+-- comentarios: foro del curso, visible para el docente y sus
+-- estudiantes matriculados. `parent_id` permite un nivel de
+-- respuestas anidadas bajo cada publicacion (foro simple, no hilos
+-- infinitos).
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS comentarios (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     curso_id INT UNSIGNED NOT NULL,
     autor_id INT UNSIGNED NULL,
+    parent_id INT UNSIGNED NULL,
     contenido TEXT NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_comentarios_curso FOREIGN KEY (curso_id) REFERENCES cursos(id) ON DELETE CASCADE,
     CONSTRAINT fk_comentarios_autor FOREIGN KEY (autor_id) REFERENCES usuarios(id) ON DELETE SET NULL,
-    KEY idx_comentarios_curso (curso_id)
+    CONSTRAINT fk_comentarios_parent FOREIGN KEY (parent_id) REFERENCES comentarios(id) ON DELETE CASCADE,
+    KEY idx_comentarios_curso (curso_id),
+    KEY idx_comentarios_parent (parent_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------

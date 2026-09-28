@@ -222,8 +222,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $entregaPath = writeDemoFile('entregas/' . $cursoId . '/' . $tarea1Id, 'entrega_demo.pdf', 'Entrega de demostración del estudiante ' . $estId);
                 $calificado = $idx % 3 !== 2;
                 $pdo->prepare(
-                    'INSERT INTO entregas (tarea_id, estudiante_id, archivo_path, calificacion, comentario, fecha_calificacion)
-                     VALUES (:tarea_id, :estudiante_id, :archivo_path, :calificacion, :comentario, :fecha_calificacion)'
+                    'INSERT INTO entregas (tarea_id, estudiante_id, archivo_path, fecha_entrega, calificacion, comentario, fecha_calificacion)
+                     VALUES (:tarea_id, :estudiante_id, :archivo_path, NOW(), :calificacion, :comentario, :fecha_calificacion)'
                 )->execute([
                     'tarea_id' => $tarea1Id, 'estudiante_id' => $estId, 'archivo_path' => $entregaPath,
                     'calificacion' => $calificado ? $notas[array_rand($notas)] : null,

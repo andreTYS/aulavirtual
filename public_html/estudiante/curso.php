@@ -26,12 +26,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'create_comentario') {
         $contenido = trim((string) ($_POST['contenido'] ?? ''));
+        $parentIdRaw = (string) ($_POST['parent_id'] ?? '');
+        $parentId = $parentIdRaw === '' ? null : (int) $parentIdRaw;
         if ($contenido === '') {
-            setFlash('danger', 'Escriba un comentario.');
+            setFlash('danger', 'Escriba un mensaje.');
         } else {
-            $ins = $pdo->prepare('INSERT INTO comentarios (curso_id, autor_id, contenido) VALUES (:curso_id, :autor_id, :contenido)');
-            $ins->execute(['curso_id' => $cursoId, 'autor_id' => $estudianteId, 'contenido' => $contenido]);
-            setFlash('success', 'Comentario publicado.');
+            $ins = $pdo->prepare('INSERT INTO comentarios (curso_id, autor_id, parent_id, contenido) VALUES (:curso_id, :autor_id, :parent_id, :contenido)');
+            $ins->execute(['curso_id' => $cursoId, 'autor_id' => $estudianteId, 'parent_id' => $parentId, 'contenido' => $contenido]);
+            setFlash('success', $parentId ? 'Respuesta publicada.' : 'Publicación creada en el foro.');
         }
     } elseif ($action === 'delete_comentario') {
         $comentarioId = (int) ($_POST['comentario_id'] ?? 0);
@@ -84,6 +86,14 @@ $comentarios = $pdo->prepare(
 $comentarios->execute(['curso_id' => $cursoId]);
 $comentarios = $comentarios->fetchAll();
 
+$respuestasPorComentario = [];
+foreach ($comentarios as $c) {
+    if ($c['parent_id']) {
+        $respuestasPorComentario[(int) $c['parent_id']][] = $c;
+    }
+}
+$comentariosRaiz = array_filter($comentarios, fn($c) => $c['parent_id'] === null);
+
 $pageTitle = $curso['nombre'];
 require __DIR__ . '/../includes/header.php';
 ?>
@@ -99,7 +109,7 @@ require __DIR__ . '/../includes/header.php';
         <button type="button" class="av-tab" data-tab-target="tab-materiales">Materiales</button>
         <button type="button" class="av-tab" data-tab-target="tab-tareas">Tareas</button>
         <button type="button" class="av-tab" data-tab-target="tab-asistencia">Mi asistencia</button>
-        <button type="button" class="av-tab" data-tab-target="tab-comentarios">Comentarios</button>
+        <button type="button" class="av-tab" data-tab-target="tab-comentarios">Foro</button>
     </div>
 
     <!-- SESIONES -->
@@ -228,10 +238,10 @@ require __DIR__ . '/../includes/header.php';
         </div>
     </div>
 
-    <!-- COMENTARIOS -->
+    <!-- FORO -->
     <div class="av-tabpanel" id="tab-comentarios">
         <div class="av-comments">
-            <?php foreach ($comentarios as $c): ?>
+            <?php foreach ($comentariosRaiz as $c): ?>
                 <div class="av-comment">
                     <div class="av-comment__body">
                         <div class="av-comment__meta">
@@ -240,9 +250,39 @@ require __DIR__ . '/../includes/header.php';
                             <span class="av-text-muted"><?= formatDateEs($c['created_at']) ?></span>
                         </div>
                         <p><?= nl2br(e($c['contenido'])) ?></p>
+                        <button type="button" class="av-btn av-btn--outline av-btn--sm" onclick="document.getElementById('reply-<?= (int) $c['id'] ?>').classList.toggle('hidden')">Responder</button>
+
+                        <?php foreach ($respuestasPorComentario[(int) $c['id']] ?? [] as $r): ?>
+                            <div class="av-comment av-comment--reply">
+                                <div class="av-comment__body">
+                                    <div class="av-comment__meta">
+                                        <strong><?= e($r['autor_nombre'] ?? 'Usuario eliminado') ?></strong>
+                                        <?php if ($r['autor_rol']): ?><span class="av-badge av-badge--gray"><?= e($r['autor_rol']) ?></span><?php endif; ?>
+                                        <span class="av-text-muted"><?= formatDateEs($r['created_at']) ?></span>
+                                    </div>
+                                    <p><?= nl2br(e($r['contenido'])) ?></p>
+                                </div>
+                                <?php if ((int) $r['autor_id'] === $estudianteId): ?>
+                                    <form method="post" onsubmit="return confirm('¿Eliminar esta respuesta?');">
+                                        <?= csrfField() ?>
+                                        <input type="hidden" name="action" value="delete_comentario">
+                                        <input type="hidden" name="comentario_id" value="<?= (int) $r['id'] ?>">
+                                        <button class="av-btn av-btn--danger av-btn--sm" type="submit">Eliminar</button>
+                                    </form>
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+
+                        <form method="post" id="reply-<?= (int) $c['id'] ?>" class="av-comment-reply-form hidden">
+                            <?= csrfField() ?>
+                            <input type="hidden" name="action" value="create_comentario">
+                            <input type="hidden" name="parent_id" value="<?= (int) $c['id'] ?>">
+                            <textarea name="contenido" rows="2" placeholder="Responder..." required></textarea>
+                            <button class="av-btn av-btn--primary av-btn--sm" type="submit">Enviar respuesta</button>
+                        </form>
                     </div>
                     <?php if ((int) $c['autor_id'] === $estudianteId): ?>
-                        <form method="post" onsubmit="return confirm('¿Eliminar este comentario?');">
+                        <form method="post" onsubmit="return confirm('¿Eliminar esta publicación y sus respuestas?');">
                             <?= csrfField() ?>
                             <input type="hidden" name="action" value="delete_comentario">
                             <input type="hidden" name="comentario_id" value="<?= (int) $c['id'] ?>">
@@ -251,15 +291,15 @@ require __DIR__ . '/../includes/header.php';
                     <?php endif; ?>
                 </div>
             <?php endforeach; ?>
-            <?php if (!$comentarios): ?>
-                <div class="av-empty">Sin comentarios todavía. Sé el primero en escribir.</div>
+            <?php if (!$comentariosRaiz): ?>
+                <div class="av-empty">Sin publicaciones todavía en el foro. Sé el primero en escribir.</div>
             <?php endif; ?>
         </div>
         <form method="post" class="av-card" style="margin-top:16px">
             <?= csrfField() ?>
             <input type="hidden" name="action" value="create_comentario">
-            <div class="av-fg"><textarea name="contenido" rows="3" placeholder="Escribe un comentario para el curso..." required></textarea></div>
-            <button class="av-btn av-btn--primary" type="submit">Comentar</button>
+            <div class="av-fg"><textarea name="contenido" rows="3" placeholder="Publica un tema nuevo en el foro del curso..." required></textarea></div>
+            <button class="av-btn av-btn--primary" type="submit">Publicar</button>
         </form>
     </div>
 </div>

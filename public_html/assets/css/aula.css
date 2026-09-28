@@ -269,12 +269,17 @@ img{max-width:100%}
 .av-empty{padding:32px;text-align:center;color:var(--n400);font-size:.85rem}
 
 /* ══════════════════════════════════════
-   COMMENTS (comentarios de curso)
+   COMMENTS / FORO (foro de curso con respuestas)
 ══════════════════════════════════════ */
 .av-comments{display:flex;flex-direction:column;gap:10px}
 .av-comment{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;background:var(--white);border:1px solid var(--n200);border-radius:var(--radius);padding:14px 16px}
 .av-comment__meta{display:flex;align-items:center;gap:8px;font-size:.8rem;margin-bottom:4px}
-.av-comment__body p{font-size:.88rem;color:var(--n800);white-space:pre-wrap}
+.av-comment__body{flex:1}
+.av-comment__body p{font-size:.88rem;color:var(--n800);white-space:pre-wrap;margin-bottom:8px}
+.av-comment--reply{margin:10px 0 0 22px;background:var(--n100);box-shadow:none}
+.av-comment-reply-form{display:flex;gap:8px;align-items:flex-start;margin-top:10px;padding-top:10px;border-top:1px dashed var(--n200)}
+.av-comment-reply-form textarea{flex:1;padding:8px 12px;border:1.5px solid var(--n200);border-radius:var(--radius-sm);font-family:inherit;font-size:.85rem;resize:vertical;min-height:40px}
+.hidden{display:none!important}
 
 /* ══════════════════════════════════════
    CALENDAR (vista mensual)
@@ -323,6 +328,18 @@ img{max-width:100%}
 
 /* Nav item unread dot */
 .av-nav__badge{margin-left:auto;background:var(--danger);color:#fff;font-size:.62rem;font-weight:800;min-width:16px;height:16px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;padding:0 4px}
+
+/* ══════════════════════════════════════
+   ASISTENCIA RÁPIDA (pills P/T/F/J)
+══════════════════════════════════════ */
+.av-attend-group{display:inline-flex;gap:4px}
+.av-attend-pill{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:var(--radius-sm);font-size:.78rem;font-weight:800;color:var(--n500);background:var(--n100);border:1.5px solid var(--n200);cursor:pointer;transition:all .12s;user-select:none}
+.av-attend-pill input{position:absolute;opacity:0;width:0;height:0}
+.av-attend-pill:hover{border-color:var(--n400)}
+.av-attend-pill--presente.checked{background:var(--success);border-color:var(--success);color:#fff}
+.av-attend-pill--tarde.checked{background:var(--ag500);border-color:var(--ag500);color:#fff}
+.av-attend-pill--falta.checked{background:var(--danger);border-color:var(--danger);color:#fff}
+.av-attend-pill--justificado.checked{background:var(--info);border-color:var(--info);color:#fff}
 
 /* ══════════════════════════════════════
    BARRAS DE REPORTE (CSS puro, sin librerias)
