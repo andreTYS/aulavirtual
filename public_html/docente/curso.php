@@ -27,6 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $duracion = (int) ($_POST['duracion_min'] ?? 90);
         $tema = trim((string) ($_POST['tema'] ?? ''));
         $linkMeetManual = trim((string) ($_POST['link_meet'] ?? ''));
+        $repetirSemanas = max(1, min(20, (int) ($_POST['repetir_semanas'] ?? 1)));
 
         if ($fecha === '' || $hora === '' || $tema === '') {
             setFlash('danger', 'Complete fecha, hora y tema de la sesión.');
@@ -34,36 +35,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             setFlash('danger', 'El link de Google Meet no es una URL válida.');
         } else {
             $duracion = $duracion > 0 ? $duracion : 90;
-            $ins = $pdo->prepare(
-                'INSERT INTO sesiones (curso_id, fecha, hora_inicio, duracion_min, tema)
-                 VALUES (:curso_id, :fecha, :hora_inicio, :duracion_min, :tema)'
-            );
-            $ins->execute([
-                'curso_id' => $cursoId, 'fecha' => $fecha, 'hora_inicio' => $hora,
-                'duracion_min' => $duracion, 'tema' => $tema,
-            ]);
-            $sesionId = (int) $pdo->lastInsertId();
+            $linkMeetCompartido = $linkMeetManual !== '' ? $linkMeetManual : null;
+            $creadas = 0;
 
-            $linkMeet = $linkMeetManual !== '' ? $linkMeetManual : null;
-            $googleEventId = null;
+            for ($semana = 0; $semana < $repetirSemanas; $semana++) {
+                $fechaSesion = date('Y-m-d', strtotime($fecha . ' +' . ($semana * 7) . ' days'));
 
-            if (googleIsConnected($pdo, $docenteId)) {
-                $creado = googleCreateMeetEvent($pdo, $docenteId, $curso['nombre'], [
-                    'fecha' => $fecha, 'hora_inicio' => $hora, 'duracion_min' => $duracion, 'tema' => $tema,
+                $ins = $pdo->prepare(
+                    'INSERT INTO sesiones (curso_id, fecha, hora_inicio, duracion_min, tema)
+                     VALUES (:curso_id, :fecha, :hora_inicio, :duracion_min, :tema)'
+                );
+                $ins->execute([
+                    'curso_id' => $cursoId, 'fecha' => $fechaSesion, 'hora_inicio' => $hora,
+                    'duracion_min' => $duracion, 'tema' => $tema,
                 ]);
-                if ($creado) {
-                    $linkMeet = $creado['meet_link'];
-                    $googleEventId = $creado['event_id'];
-                    setFlash('success', 'Sesión programada y videollamada de Google Meet creada automáticamente.');
-                } else {
-                    setFlash('danger', 'La sesión se programó, pero no se pudo crear la videollamada de Google Meet automáticamente. Puede editar la sesión y pegar un enlace manualmente, o revisar la conexión con Google en Mi perfil.');
+                $sesionId = (int) $pdo->lastInsertId();
+                $creadas++;
+
+                $linkMeet = $linkMeetCompartido;
+                $googleEventId = null;
+
+                // Solo se crea un evento real de Google Calendar para la primera
+                // sesión de la serie; las siguientes reutilizan el mismo enlace
+                // de Meet (es una sala fija, no expira), evitando crear N
+                // eventos separados y la complejidad de mantenerlos sincronizados.
+                if ($semana === 0 && googleIsConnected($pdo, $docenteId)) {
+                    $creado = googleCreateMeetEvent($pdo, $docenteId, $curso['nombre'], [
+                        'fecha' => $fechaSesion, 'hora_inicio' => $hora, 'duracion_min' => $duracion, 'tema' => $tema,
+                    ]);
+                    if ($creado) {
+                        $linkMeet = $creado['meet_link'];
+                        $linkMeetCompartido = $creado['meet_link'];
+                        $googleEventId = $creado['event_id'];
+                    }
                 }
-            } else {
-                setFlash('success', 'Sesión programada.' . ($linkMeet === null ? ' Conecte su cuenta de Google en Mi perfil para generar el enlace de Meet automáticamente.' : ''));
+
+                $upd = $pdo->prepare('UPDATE sesiones SET link_meet = :link_meet, google_event_id = :google_event_id WHERE id = :id');
+                $upd->execute(['link_meet' => $linkMeet, 'google_event_id' => $googleEventId, 'id' => $sesionId]);
             }
 
-            $upd = $pdo->prepare('UPDATE sesiones SET link_meet = :link_meet, google_event_id = :google_event_id WHERE id = :id');
-            $upd->execute(['link_meet' => $linkMeet, 'google_event_id' => $googleEventId, 'id' => $sesionId]);
+            $mensaje = $creadas > 1 ? "Se programaron $creadas sesiones semanales." : 'Sesión programada.';
+            if (googleIsConnected($pdo, $docenteId)) {
+                $mensaje .= $linkMeetCompartido ? ' Videollamada de Google Meet creada automáticamente.' : ' No se pudo crear la videollamada de Google Meet automáticamente; puede editar la sesión y pegar un enlace manualmente.';
+            } elseif (!$linkMeetCompartido) {
+                $mensaje .= ' Conecte su cuenta de Google en Mi perfil para generar el enlace de Meet automáticamente.';
+            }
+            setFlash($linkMeetCompartido || !googleIsConnected($pdo, $docenteId) ? 'success' : 'danger', $mensaje);
         }
     } elseif ($action === 'update_sesion') {
         $sesionId = (int) ($_POST['sesion_id'] ?? 0);
@@ -302,6 +319,14 @@ $comentariosRaiz = array_filter($comentarios, fn($c) => $c['parent_id'] === null
 $googleConectado = googleIsConnected($pdo, $docenteId);
 $categoriaLabels = ['practica' => 'Práctica', 'examen' => 'Examen', 'participacion' => 'Participación', 'trabajo' => 'Trabajo'];
 
+$examenes = $pdo->prepare(
+    "SELECT e.*, (SELECT COUNT(*) FROM examen_preguntas p WHERE p.examen_id = e.id) AS total_preguntas,
+            (SELECT COUNT(*) FROM examen_intentos i WHERE i.examen_id = e.id AND i.fecha_envio IS NOT NULL) AS total_rendidos
+     FROM examenes e WHERE e.curso_id = :curso_id ORDER BY e.fecha_limite"
+);
+$examenes->execute(['curso_id' => $cursoId]);
+$examenes = $examenes->fetchAll();
+
 $pageTitle = $curso['nombre'];
 require __DIR__ . '/../includes/header.php';
 ?>
@@ -316,6 +341,7 @@ require __DIR__ . '/../includes/header.php';
         <button type="button" class="av-tab active" data-tab-target="tab-sesiones">Sesiones</button>
         <button type="button" class="av-tab" data-tab-target="tab-materiales">Materiales</button>
         <button type="button" class="av-tab" data-tab-target="tab-tareas">Tareas</button>
+        <button type="button" class="av-tab" data-tab-target="tab-examenes">Exámenes</button>
         <button type="button" class="av-tab" data-tab-target="tab-asistencia">Asistencia</button>
         <button type="button" class="av-tab" data-tab-target="tab-avisos">Avisos</button>
         <button type="button" class="av-tab" data-tab-target="tab-comentarios">Foro</button>
@@ -342,6 +368,15 @@ require __DIR__ . '/../includes/header.php';
                     <div class="av-fg"><label>Hora de inicio</label><input type="time" name="hora_inicio" required></div>
                     <div class="av-fg"><label>Duración (min)</label><input type="number" name="duracion_min" value="90" min="15" step="5"></div>
                     <div class="av-fg"><label>Tema</label><input type="text" name="tema" required></div>
+                    <div class="av-fg">
+                        <label>Repetir semanalmente</label>
+                        <select name="repetir_semanas">
+                            <option value="1">No repetir (solo esta fecha)</option>
+                            <?php foreach ([4, 8, 10, 12, 16] as $n): ?>
+                                <option value="<?= $n ?>"><?= $n ?> semanas</option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                 </div>
                 <?php if (!$googleConectado): ?>
                     <div class="av-fg"><label>Link de Google Meet (opcional)</label><input type="url" name="link_meet" placeholder="https://meet.google.com/..."></div>
@@ -549,6 +584,35 @@ require __DIR__ . '/../includes/header.php';
                 <?php endforeach; ?>
                 <?php if (!$tareas): ?>
                     <tr><td colspan="6" class="av-empty">No hay tareas creadas.</td></tr>
+                <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- EXÁMENES -->
+    <div class="av-tabpanel" id="tab-examenes">
+        <div class="av-page-header" style="border-bottom:none;padding-bottom:0;margin-bottom:16px">
+            <p style="margin:0">Preguntas de opción múltiple o verdadero/falso, con calificación automática.</p>
+            <a href="/docente/examenes.php?curso_id=<?= $cursoId ?>" class="av-btn av-btn--primary">Gestionar exámenes</a>
+        </div>
+        <div class="av-table-wrap">
+            <table class="av-table">
+                <thead><tr><th>Título</th><th>Preguntas</th><th>Fecha límite</th><th>Rendido por</th></tr></thead>
+                <tbody>
+                <?php foreach ($examenes as $ex): ?>
+                    <tr>
+                        <td>
+                            <strong><?= e($ex['titulo']) ?></strong>
+                            <?php if (isPastDue($ex['fecha_limite'])): ?><span class="av-badge av-badge--red">Vencido</span><?php endif; ?>
+                        </td>
+                        <td><?= (int) $ex['total_preguntas'] ?></td>
+                        <td><?= formatDateEs($ex['fecha_limite']) ?></td>
+                        <td><?= (int) $ex['total_rendidos'] ?> estudiante(s)</td>
+                    </tr>
+                <?php endforeach; ?>
+                <?php if (!$examenes): ?>
+                    <tr><td colspan="4" class="av-empty">No hay exámenes creados todavía.</td></tr>
                 <?php endif; ?>
                 </tbody>
             </table>

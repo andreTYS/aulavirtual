@@ -65,6 +65,16 @@ $tareasStmt = $pdo->prepare(
 $tareasStmt->execute(['estudiante_id' => $estudianteId, 'curso_id' => $cursoId]);
 $tareas = $tareasStmt->fetchAll();
 
+$examenesStmt = $pdo->prepare(
+    'SELECT ex.*, i.puntaje, i.fecha_envio,
+            (SELECT COUNT(*) FROM examen_preguntas p WHERE p.examen_id = ex.id) AS total_preguntas
+     FROM examenes ex
+     LEFT JOIN examen_intentos i ON i.examen_id = ex.id AND i.estudiante_id = :estudiante_id
+     WHERE ex.curso_id = :curso_id ORDER BY ex.fecha_limite'
+);
+$examenesStmt->execute(['estudiante_id' => $estudianteId, 'curso_id' => $cursoId]);
+$examenes = $examenesStmt->fetchAll();
+
 $asistencias = $pdo->prepare(
     'SELECT s.id AS sesion_id, s.fecha, s.tema, s.estado AS sesion_estado, a.estado AS asistencia_estado
      FROM sesiones s
@@ -108,6 +118,7 @@ require __DIR__ . '/../includes/header.php';
         <button type="button" class="av-tab active" data-tab-target="tab-sesiones">Sesiones</button>
         <button type="button" class="av-tab" data-tab-target="tab-materiales">Materiales</button>
         <button type="button" class="av-tab" data-tab-target="tab-tareas">Tareas</button>
+        <button type="button" class="av-tab" data-tab-target="tab-examenes">Exámenes</button>
         <button type="button" class="av-tab" data-tab-target="tab-asistencia">Mi asistencia</button>
         <button type="button" class="av-tab" data-tab-target="tab-comentarios">Foro</button>
     </div>
@@ -195,6 +206,45 @@ require __DIR__ . '/../includes/header.php';
                 <?php endforeach; ?>
                 <?php if (!$tareas): ?>
                     <tr><td colspan="4" class="av-empty">No hay tareas publicadas.</td></tr>
+                <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- EXÁMENES -->
+    <div class="av-tabpanel" id="tab-examenes">
+        <div class="av-table-wrap">
+            <table class="av-table">
+                <thead><tr><th>Examen</th><th>Fecha límite</th><th>Estado</th><th></th></tr></thead>
+                <tbody>
+                <?php foreach ($examenes as $ex): ?>
+                    <?php $exVencido = isPastDue($ex['fecha_limite']); ?>
+                    <tr>
+                        <td><strong><?= e($ex['titulo']) ?></strong></td>
+                        <td><?= formatDateEs($ex['fecha_limite']) ?></td>
+                        <td>
+                            <?php if ($ex['fecha_envio']): ?>
+                                <span class="av-badge av-badge--green">Rendido: <?= number_format((float) $ex['puntaje'], 2) ?>/20</span>
+                            <?php elseif ($exVencido): ?>
+                                <span class="av-badge av-badge--red">Vencido - no rendido</span>
+                            <?php elseif ((int) $ex['total_preguntas'] === 0): ?>
+                                <span class="av-badge av-badge--gray">Sin preguntas aún</span>
+                            <?php else: ?>
+                                <span class="av-badge av-badge--amber">Pendiente</span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if (!$ex['fecha_envio'] && !$exVencido && (int) $ex['total_preguntas'] > 0): ?>
+                                <a href="/estudiante/examen.php?id=<?= (int) $ex['id'] ?>" class="av-btn av-btn--primary av-btn--sm">Rendir examen</a>
+                            <?php elseif ($ex['fecha_envio']): ?>
+                                <a href="/estudiante/examen.php?id=<?= (int) $ex['id'] ?>" class="av-btn av-btn--secondary av-btn--sm">Ver resultado</a>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+                <?php if (!$examenes): ?>
+                    <tr><td colspan="4" class="av-empty">No hay exámenes publicados.</td></tr>
                 <?php endif; ?>
                 </tbody>
             </table>

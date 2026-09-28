@@ -20,12 +20,30 @@ $stmt = $pdo->prepare(
 $stmt->execute(['estudiante_id' => $estudianteId]);
 $filas = $stmt->fetchAll();
 
+$examenesStmt = $pdo->prepare(
+    'SELECT c.id AS curso_id, c.nombre AS curso_nombre, ex.titulo, ex.fecha_limite, ex.peso,
+            i.puntaje AS calificacion, i.fecha_envio
+     FROM matriculas m
+     JOIN cursos c ON c.id = m.curso_id
+     JOIN examenes ex ON ex.curso_id = c.id
+     LEFT JOIN examen_intentos i ON i.examen_id = ex.id AND i.estudiante_id = m.estudiante_id
+     WHERE m.estudiante_id = :estudiante_id
+     ORDER BY c.nombre, ex.fecha_limite'
+);
+$examenesStmt->execute(['estudiante_id' => $estudianteId]);
+$filasExamenes = $examenesStmt->fetchAll();
+
 $categoriaLabels = ['practica' => 'Práctica', 'examen' => 'Examen', 'participacion' => 'Participación', 'trabajo' => 'Trabajo'];
 
 $porCurso = [];
 foreach ($filas as $f) {
     $porCurso[$f['curso_id']]['nombre'] = $f['curso_nombre'];
     $porCurso[$f['curso_id']]['tareas'][] = $f;
+}
+foreach ($filasExamenes as $f) {
+    $porCurso[$f['curso_id']]['nombre'] = $f['curso_nombre'];
+    $porCurso[$f['curso_id']]['tareas'] ??= [];
+    $porCurso[$f['curso_id']]['examenes'][] = $f;
 }
 
 $pageTitle = 'Mis calificaciones';
@@ -34,7 +52,7 @@ require __DIR__ . '/../includes/header.php';
 <div class="av-page-header"><h2>Mis calificaciones</h2></div>
 
 <?php foreach ($porCurso as $curso): ?>
-    <?php $promedio = promedioPonderado($curso['tareas']); ?>
+    <?php $promedio = promedioPonderado(array_merge($curso['tareas'], $curso['examenes'] ?? [])); ?>
     <div class="av-card" style="margin-bottom:18px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
             <h3 style="margin:0"><?= e($curso['nombre']) ?></h3>
@@ -67,6 +85,31 @@ require __DIR__ . '/../includes/header.php';
                 </tbody>
             </table>
         </div>
+        <?php if ($curso['examenes'] ?? null): ?>
+            <div class="av-table-wrap" style="margin-top:14px">
+                <table class="av-table">
+                    <thead><tr><th>Examen</th><th>Peso</th><th>Fecha límite</th><th>Calificación</th></tr></thead>
+                    <tbody>
+                    <?php foreach ($curso['examenes'] as $ex): ?>
+                        <tr>
+                            <td><?= e($ex['titulo']) ?></td>
+                            <td><?= number_format((float) $ex['peso'], 2) ?></td>
+                            <td><?= formatDateEs($ex['fecha_limite']) ?></td>
+                            <td>
+                                <?php if ($ex['calificacion'] !== null): ?>
+                                    <strong><?= e((string) $ex['calificacion']) ?> / 20</strong>
+                                <?php elseif (isPastDue($ex['fecha_limite'])): ?>
+                                    <span class="av-text-muted">Vencido, sin rendir</span>
+                                <?php else: ?>
+                                    <span class="av-text-muted">Pendiente</span>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
     </div>
 <?php endforeach; ?>
 <?php if (!$porCurso): ?>

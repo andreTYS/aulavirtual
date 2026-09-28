@@ -31,6 +31,16 @@ foreach ($notasStmt->fetchAll() as $row) {
     $notasPorCurso[(int) $row['curso_id']][] = ['calificacion' => (float) $row['calificacion'], 'peso' => (float) $row['peso']];
 }
 
+$notasExamenStmt = $pdo->prepare(
+    "SELECT ex.curso_id, i.puntaje AS calificacion, ex.peso FROM examen_intentos i
+     JOIN examenes ex ON ex.id = i.examen_id
+     WHERE i.estudiante_id = :estudiante_id AND i.puntaje IS NOT NULL"
+);
+$notasExamenStmt->execute(['estudiante_id' => $estudianteId]);
+foreach ($notasExamenStmt->fetchAll() as $row) {
+    $notasPorCurso[(int) $row['curso_id']][] = ['calificacion' => (float) $row['calificacion'], 'peso' => (float) $row['peso']];
+}
+
 $porPeriodo = [];
 $promediosCurso = [];
 foreach ($matriculas as $m) {

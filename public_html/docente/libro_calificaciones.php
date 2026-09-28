@@ -21,13 +21,19 @@ foreach ($cursos as $c) {
 }
 
 $tareas = [];
+$examenes = [];
 $estudiantes = [];
 $notas = [];
+$notasExamen = [];
 
 if ($cursoValido) {
     $stmt = $pdo->prepare('SELECT id, titulo, peso FROM tareas WHERE curso_id = :curso_id ORDER BY fecha_limite');
     $stmt->execute(['curso_id' => $cursoId]);
     $tareas = $stmt->fetchAll();
+
+    $stmt = $pdo->prepare('SELECT id, titulo, peso FROM examenes WHERE curso_id = :curso_id ORDER BY fecha_limite');
+    $stmt->execute(['curso_id' => $cursoId]);
+    $examenes = $stmt->fetchAll();
 
     $stmt = $pdo->prepare(
         "SELECT u.id, u.nombre, u.apellidos FROM usuarios u
@@ -46,12 +52,26 @@ if ($cursoValido) {
     foreach ($stmt->fetchAll() as $row) {
         $notas[(int) $row['estudiante_id']][(int) $row['tarea_id']] = $row['calificacion'];
     }
+
+    $stmt = $pdo->prepare(
+        "SELECT i.estudiante_id, i.examen_id, i.puntaje FROM examen_intentos i
+         JOIN examenes ex ON ex.id = i.examen_id WHERE ex.curso_id = :curso_id AND i.fecha_envio IS NOT NULL"
+    );
+    $stmt->execute(['curso_id' => $cursoId]);
+    foreach ($stmt->fetchAll() as $row) {
+        $notasExamen[(int) $row['estudiante_id']][(int) $row['examen_id']] = $row['puntaje'];
+    }
 }
 
 $pageTitle = 'Libro de calificaciones';
 require __DIR__ . '/../includes/header.php';
 ?>
-<div class="av-page-header"><h2>Libro de calificaciones</h2></div>
+<div class="av-page-header">
+    <h2>Libro de calificaciones</h2>
+    <?php if ($cursoValido): ?>
+        <a href="/docente/export_calificaciones.php?curso_id=<?= $cursoId ?>" class="av-btn av-btn--outline"><?= avIcon('download') ?> Exportar CSV</a>
+    <?php endif; ?>
+</div>
 
 <div class="av-fg" style="max-width:340px">
     <label>Curso</label>
@@ -71,6 +91,7 @@ require __DIR__ . '/../includes/header.php';
                 <tr>
                     <th>Estudiante</th>
                     <?php foreach ($tareas as $t): ?><th><?= e($t['titulo']) ?> <span class="av-text-muted">(x<?= number_format((float) $t['peso'], 1) ?>)</span></th><?php endforeach; ?>
+                    <?php foreach ($examenes as $ex): ?><th><?= e($ex['titulo']) ?> <span class="av-text-muted">(x<?= number_format((float) $ex['peso'], 1) ?>)</span></th><?php endforeach; ?>
                     <th>Promedio ponderado</th>
                 </tr>
             </thead>
@@ -78,9 +99,9 @@ require __DIR__ . '/../includes/header.php';
             <?php foreach ($estudiantes as $est): ?>
                 <?php
                     $eid = (int) $est['id'];
-                    $filasPromedio = array_map(
-                        fn($t) => ['calificacion' => $notas[$eid][$t['id']] ?? null, 'peso' => $t['peso']],
-                        $tareas
+                    $filasPromedio = array_merge(
+                        array_map(fn($t) => ['calificacion' => $notas[$eid][$t['id']] ?? null, 'peso' => $t['peso']], $tareas),
+                        array_map(fn($ex) => ['calificacion' => $notasExamen[$eid][$ex['id']] ?? null, 'peso' => $ex['peso']], $examenes)
                     );
                     $promedio = promedioPonderado($filasPromedio);
                 ?>
@@ -88,6 +109,10 @@ require __DIR__ . '/../includes/header.php';
                     <td><strong><?= e($est['nombre'] . ' ' . $est['apellidos']) ?></strong></td>
                     <?php foreach ($tareas as $t): ?>
                         <?php $nota = $notas[$eid][$t['id']] ?? null; ?>
+                        <td><?= $nota !== null ? number_format((float) $nota, 2) : '<span class="av-text-muted">-</span>' ?></td>
+                    <?php endforeach; ?>
+                    <?php foreach ($examenes as $ex): ?>
+                        <?php $nota = $notasExamen[$eid][$ex['id']] ?? null; ?>
                         <td><?= $nota !== null ? number_format((float) $nota, 2) : '<span class="av-text-muted">-</span>' ?></td>
                     <?php endforeach; ?>
                     <td>
@@ -100,7 +125,7 @@ require __DIR__ . '/../includes/header.php';
                 </tr>
             <?php endforeach; ?>
             <?php if (!$estudiantes): ?>
-                <tr><td colspan="<?= count($tareas) + 2 ?>" class="av-empty">No hay estudiantes matriculados en este curso.</td></tr>
+                <tr><td colspan="<?= count($tareas) + count($examenes) + 2 ?>" class="av-empty">No hay estudiantes matriculados en este curso.</td></tr>
             <?php endif; ?>
             </tbody>
         </table>
