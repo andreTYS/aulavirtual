@@ -31,7 +31,9 @@ $errors = [];
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     requireValidCsrf();
 
-    if ($entrega && $entrega['calificacion'] !== null) {
+    if (isPastDue($tarea['fecha_limite'])) {
+        $errors[] = 'El plazo de entrega venció, ya no se puede entregar ni reemplazar el archivo.';
+    } elseif ($entrega && $entrega['calificacion'] !== null) {
         $errors[] = 'Esta tarea ya fue calificada, no puede reemplazar la entrega.';
     } else {
         try {
@@ -45,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 setFlash('success', 'Entrega actualizada correctamente.');
             } else {
                 $ins = $pdo->prepare(
-                    'INSERT INTO entregas (tarea_id, estudiante_id, archivo_path) VALUES (:tarea_id, :estudiante_id, :archivo_path)'
+                    'INSERT INTO entregas (tarea_id, estudiante_id, archivo_path, fecha_entrega) VALUES (:tarea_id, :estudiante_id, :archivo_path, NOW())'
                 );
                 $ins->execute(['tarea_id' => $tareaId, 'estudiante_id' => $estudianteId, 'archivo_path' => $archivoPath]);
                 setFlash('success', 'Tarea entregada correctamente.');
@@ -56,6 +58,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+
+$vencida = isPastDue($tarea['fecha_limite']);
 
 $pageTitle = $tarea['titulo'];
 require __DIR__ . '/../includes/header.php';
@@ -80,25 +84,30 @@ require __DIR__ . '/../includes/header.php';
 
 <div class="av-card">
     <h3>Mi entrega</h3>
-    <?php if ($entrega): ?>
+    <?php if ($entrega && $entrega['archivo_path']): ?>
         <p>Entregado el <?= formatDateEs($entrega['fecha_entrega']) ?> &middot;
             <a href="/download.php?type=entrega&id=<?= (int) $entrega['id'] ?>" style="color:var(--ab600);font-weight:600">Descargar mi archivo</a></p>
-        <?php if ($entrega['calificacion'] !== null): ?>
-            <div class="av-grade-box" style="margin-top:12px">
-                <strong>Calificación: <?= e((string) $entrega['calificacion']) ?> / 20</strong><br>
-                <?php if ($entrega['comentario']): ?>
-                    Comentario del docente: <?= nl2br(e($entrega['comentario'])) ?>
-                <?php endif; ?>
-            </div>
-        <?php else: ?>
-            <p class="av-text-muted" style="margin:10px 0">Aún no calificada. Puede reemplazar el archivo mientras no haya calificación.</p>
-            <form method="post" enctype="multipart/form-data">
-                <?= csrfField() ?>
-                <input type="hidden" name="tarea_id" value="<?= $tareaId ?>">
-                <div class="av-fg"><input type="file" name="archivo" required></div>
-                <button type="submit" class="av-btn av-btn--primary">Reemplazar entrega</button>
-            </form>
-        <?php endif; ?>
+    <?php elseif ($entrega && $entrega['calificacion'] !== null): ?>
+        <p class="av-text-muted">Calificado directamente por el docente, sin entrega digital.</p>
+    <?php endif; ?>
+
+    <?php if ($entrega && $entrega['calificacion'] !== null): ?>
+        <div class="av-grade-box" style="margin-top:12px">
+            <strong>Calificación: <?= e((string) $entrega['calificacion']) ?> / 20</strong><br>
+            <?php if ($entrega['comentario']): ?>
+                Comentario del docente: <?= nl2br(e($entrega['comentario'])) ?>
+            <?php endif; ?>
+        </div>
+    <?php elseif ($vencida): ?>
+        <p class="av-alert av-alert--danger" style="margin-top:10px"><span>El plazo de entrega venció. Ya no se puede entregar ni reemplazar el archivo.</span></p>
+    <?php elseif ($entrega): ?>
+        <p class="av-text-muted" style="margin:10px 0">Aún no calificada. Puede reemplazar el archivo mientras no haya calificación y no haya vencido el plazo.</p>
+        <form method="post" enctype="multipart/form-data">
+            <?= csrfField() ?>
+            <input type="hidden" name="tarea_id" value="<?= $tareaId ?>">
+            <div class="av-fg"><input type="file" name="archivo" required></div>
+            <button type="submit" class="av-btn av-btn--primary">Reemplazar entrega</button>
+        </form>
     <?php else: ?>
         <form method="post" enctype="multipart/form-data">
             <?= csrfField() ?>

@@ -144,6 +144,27 @@ function formatSoles(?string $monto): string
 }
 
 /**
+ * Promedio ponderado de un conjunto de calificaciones. Cada elemento es
+ * ['calificacion' => float|null, 'peso' => float]; las tareas sin
+ * calificar no participan del cálculo. Devuelve null si ninguna tarea
+ * fue calificada todavía.
+ */
+function promedioPonderado(array $filas): ?float
+{
+    $sumaPesos = 0.0;
+    $sumaNotas = 0.0;
+    foreach ($filas as $f) {
+        if ($f['calificacion'] === null) {
+            continue;
+        }
+        $peso = (float) $f['peso'];
+        $sumaPesos += $peso;
+        $sumaNotas += (float) $f['calificacion'] * $peso;
+    }
+    return $sumaPesos > 0 ? $sumaNotas / $sumaPesos : null;
+}
+
+/**
  * Devuelve el markup de un icono SVG en linea (sin dependencias externas).
  */
 function avIcon(string $name): string

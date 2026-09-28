@@ -21,22 +21,21 @@ $stmt->execute(['estudiante_id' => $estudianteId]);
 $matriculas = $stmt->fetchAll();
 
 $notasStmt = $pdo->prepare(
-    "SELECT t.curso_id, e.calificacion FROM entregas e
+    "SELECT t.curso_id, e.calificacion, t.peso FROM entregas e
      JOIN tareas t ON t.id = e.tarea_id
      WHERE e.estudiante_id = :estudiante_id AND e.calificacion IS NOT NULL"
 );
 $notasStmt->execute(['estudiante_id' => $estudianteId]);
 $notasPorCurso = [];
 foreach ($notasStmt->fetchAll() as $row) {
-    $notasPorCurso[(int) $row['curso_id']][] = (float) $row['calificacion'];
+    $notasPorCurso[(int) $row['curso_id']][] = ['calificacion' => (float) $row['calificacion'], 'peso' => (float) $row['peso']];
 }
 
 $porPeriodo = [];
 $promediosCurso = [];
 foreach ($matriculas as $m) {
     $cid = (int) $m['curso_id'];
-    $notas = $notasPorCurso[$cid] ?? [];
-    $promedio = $notas ? array_sum($notas) / count($notas) : null;
+    $promedio = promedioPonderado($notasPorCurso[$cid] ?? []);
     $promediosCurso[$cid] = $promedio;
     $periodoKey = $m['periodo_nombre'] ?? 'Sin periodo';
     $porPeriodo[$periodoKey][] = $m + ['promedio' => $promedio];

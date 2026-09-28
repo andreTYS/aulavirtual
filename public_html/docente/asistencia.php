@@ -74,7 +74,14 @@ require __DIR__ . '/../includes/header.php';
     <p><?= formatFechaEs($sesion['fecha']) ?> &middot; <?= formatHoraEs($sesion['hora_inicio']) ?></p>
 </div>
 
-<form method="post">
+<?php $estadoAbrev = ['presente' => 'P', 'tarde' => 'T', 'falta' => 'F', 'justificado' => 'J']; ?>
+<?php if ($alumnos): ?>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+        <button type="button" class="av-btn av-btn--outline av-btn--sm" onclick="marcarTodos('presente')">Marcar todos presentes</button>
+        <button type="button" class="av-btn av-btn--outline av-btn--sm" onclick="marcarTodos('falta')">Marcar todos falta</button>
+    </div>
+<?php endif; ?>
+<form method="post" id="form-asistencia">
     <?= csrfField() ?>
     <input type="hidden" name="sesion_id" value="<?= $sesionId ?>">
     <div class="av-table-wrap">
@@ -82,14 +89,18 @@ require __DIR__ . '/../includes/header.php';
             <thead><tr><th>Estudiante</th><th>Estado</th><th>Observación</th></tr></thead>
             <tbody>
             <?php foreach ($alumnos as $a): ?>
+                <?php $estadoActual = $a['estado'] ?? 'falta'; ?>
                 <tr>
                     <td><strong><?= e($a['nombre'] . ' ' . $a['apellidos']) ?></strong></td>
                     <td>
-                        <select name="estado[<?= (int) $a['estudiante_id'] ?>]" style="width:auto;min-width:140px">
+                        <div class="av-attend-group">
                             <?php foreach ($estadosValidos as $estado): ?>
-                                <option value="<?= $estado ?>" <?= ($a['estado'] ?? 'falta') === $estado ? 'selected' : '' ?>><?= ucfirst($estado) ?></option>
+                                <label class="av-attend-pill av-attend-pill--<?= $estado ?><?= $estadoActual === $estado ? ' checked' : '' ?>">
+                                    <input type="radio" name="estado[<?= (int) $a['estudiante_id'] ?>]" value="<?= $estado ?>" <?= $estadoActual === $estado ? 'checked' : '' ?> onchange="this.closest('.av-attend-group').querySelectorAll('.av-attend-pill').forEach(p=>p.classList.remove('checked'));this.closest('.av-attend-pill').classList.add('checked')">
+                                    <?= $estadoAbrev[$estado] ?>
+                                </label>
                             <?php endforeach; ?>
-                        </select>
+                        </div>
                     </td>
                     <td>
                         <input type="text" name="observacion[<?= (int) $a['estudiante_id'] ?>]" value="<?= e($a['observacion'] ?? '') ?>"
@@ -107,4 +118,16 @@ require __DIR__ . '/../includes/header.php';
         <button type="submit" class="av-btn av-btn--primary" style="margin-top:16px">Guardar asistencia</button>
     <?php endif; ?>
 </form>
+<script>
+function marcarTodos(estado) {
+    document.querySelectorAll('#form-asistencia .av-attend-group').forEach(function (group) {
+        group.querySelectorAll('.av-attend-pill').forEach(function (pill) {
+            const input = pill.querySelector('input');
+            const activo = input.value === estado;
+            input.checked = activo;
+            pill.classList.toggle('checked', activo);
+        });
+    });
+}
+</script>
 <?php require __DIR__ . '/../includes/footer.php'; ?>

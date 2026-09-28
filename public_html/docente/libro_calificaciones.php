@@ -25,7 +25,7 @@ $estudiantes = [];
 $notas = [];
 
 if ($cursoValido) {
-    $stmt = $pdo->prepare('SELECT id, titulo FROM tareas WHERE curso_id = :curso_id ORDER BY fecha_limite');
+    $stmt = $pdo->prepare('SELECT id, titulo, peso FROM tareas WHERE curso_id = :curso_id ORDER BY fecha_limite');
     $stmt->execute(['curso_id' => $cursoId]);
     $tareas = $stmt->fetchAll();
 
@@ -70,16 +70,19 @@ require __DIR__ . '/../includes/header.php';
             <thead>
                 <tr>
                     <th>Estudiante</th>
-                    <?php foreach ($tareas as $t): ?><th><?= e($t['titulo']) ?></th><?php endforeach; ?>
-                    <th>Promedio</th>
+                    <?php foreach ($tareas as $t): ?><th><?= e($t['titulo']) ?> <span class="av-text-muted">(x<?= number_format((float) $t['peso'], 1) ?>)</span></th><?php endforeach; ?>
+                    <th>Promedio ponderado</th>
                 </tr>
             </thead>
             <tbody>
             <?php foreach ($estudiantes as $est): ?>
                 <?php
                     $eid = (int) $est['id'];
-                    $notasEst = array_filter($notas[$eid] ?? [], fn($n) => $n !== null);
-                    $promedio = $notasEst ? array_sum($notasEst) / count($notasEst) : null;
+                    $filasPromedio = array_map(
+                        fn($t) => ['calificacion' => $notas[$eid][$t['id']] ?? null, 'peso' => $t['peso']],
+                        $tareas
+                    );
+                    $promedio = promedioPonderado($filasPromedio);
                 ?>
                 <tr>
                     <td><strong><?= e($est['nombre'] . ' ' . $est['apellidos']) ?></strong></td>
