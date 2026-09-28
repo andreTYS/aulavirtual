@@ -149,6 +149,33 @@ function formatSoles(?string $monto): string
  * calificar no participan del cálculo. Devuelve null si ninguna tarea
  * fue calificada todavía.
  */
+/**
+ * Devuelve [lunes, domingo] (formato Y-m-d) de la semana ISO que contiene
+ * $fechaRef. Usado por las vistas de horario semanal.
+ */
+function limitesSemana(string $fechaRef): array
+{
+    $ref = new DateTime($fechaRef);
+    $diaSemana = (int) $ref->format('N'); // 1 = lunes ... 7 = domingo
+    $lunes = (clone $ref)->modify('-' . ($diaSemana - 1) . ' days');
+    $domingo = (clone $lunes)->modify('+6 days');
+    return [$lunes->format('Y-m-d'), $domingo->format('Y-m-d')];
+}
+
+/**
+ * Las 7 fechas (Y-m-d) de la semana que empieza en $lunes.
+ */
+function diasSemana(string $lunes): array
+{
+    $dias = [];
+    $cursor = new DateTime($lunes);
+    for ($i = 0; $i < 7; $i++) {
+        $dias[] = $cursor->format('Y-m-d');
+        $cursor->modify('+1 day');
+    }
+    return $dias;
+}
+
 function promedioPonderado(array $filas): ?float
 {
     $sumaPesos = 0.0;

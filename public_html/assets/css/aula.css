@@ -353,6 +353,23 @@ img{max-width:100%}
 @media(max-width:600px){.av-barchart__row{grid-template-columns:100px 1fr 50px}}
 
 /* ══════════════════════════════════════
+   HORARIO SEMANAL
+══════════════════════════════════════ */
+.av-week-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:12px;flex-wrap:wrap}
+.av-week-head h3{font-size:1.05rem;font-weight:800;color:var(--n900)}
+.av-week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
+.av-week-day{background:var(--white);border:1px solid var(--n200);border-radius:var(--radius);padding:10px;min-height:140px;display:flex;flex-direction:column;gap:6px}
+.av-week-day.is-today{border-color:var(--ab500);background:#eff6ff}
+.av-week-day__head{font-size:.72rem;font-weight:800;color:var(--n500);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--n100);padding-bottom:6px;margin-bottom:2px}
+.av-week-day.is-today .av-week-day__head{color:var(--ab700)}
+.av-week-pill{background:var(--ab100);color:var(--ab700);border-radius:var(--radius-sm);padding:6px 8px;font-size:.72rem;line-height:1.4}
+.av-week-pill strong{display:block;font-size:.74rem}
+.av-week-pill small{display:block;color:var(--n500);font-size:.65rem;margin-top:1px}
+@media(max-width:900px){
+  .av-week-grid{grid-template-columns:repeat(7,minmax(120px,1fr));overflow-x:auto}
+}
+
+/* ══════════════════════════════════════
    MISC
 ══════════════════════════════════════ */
 .av-grade-box{background:var(--success-lt);border-radius:var(--radius);padding:16px 18px;color:#166534;font-size:.88rem}

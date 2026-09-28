@@ -46,6 +46,7 @@ function navActive(string $path): string
                 <a class="av-nav__item<?= navActive('/admin/cursos.php') . navActive('/admin/curso_form.php') . navActive('/admin/matriculas.php') ?>" href="/admin/cursos.php"><?= avIcon('book') ?> Cursos</a>
                 <a class="av-nav__item<?= navActive('/admin/carreras.php') ?>" href="/admin/carreras.php"><?= avIcon('graduation') ?> Carreras</a>
                 <a class="av-nav__item<?= navActive('/admin/periodos.php') ?>" href="/admin/periodos.php"><?= avIcon('calendar') ?> Periodos académicos</a>
+                <a class="av-nav__item<?= navActive('/admin/horario.php') ?>" href="/admin/horario.php"><?= avIcon('calendar') ?> Horario semanal</a>
                 <div class="av-nav__group">Finanzas</div>
                 <a class="av-nav__item<?= navActive('/admin/pagos.php') ?>" href="/admin/pagos.php"><?= avIcon('check') ?> Pagos</a>
                 <a class="av-nav__item<?= navActive('/admin/conceptos_pago.php') ?>" href="/admin/conceptos_pago.php"><?= avIcon('download') ?> Conceptos de pago</a>
@@ -62,6 +63,7 @@ function navActive(string $path): string
                 <div class="av-nav__group">Docencia</div>
                 <a class="av-nav__item<?= navActive('/docente/index.php') ?>" href="/docente/index.php"><?= avIcon('book') ?> Mis cursos</a>
                 <a class="av-nav__item<?= navActive('/docente/calendario.php') ?>" href="/docente/calendario.php"><?= avIcon('calendar') ?> Calendario</a>
+                <a class="av-nav__item<?= navActive('/docente/horario.php') ?>" href="/docente/horario.php"><?= avIcon('calendar') ?> Horario semanal</a>
                 <a class="av-nav__item<?= navActive('/docente/libro_calificaciones.php') ?>" href="/docente/libro_calificaciones.php"><?= avIcon('award') ?> Libro de calificaciones</a>
                 <div class="av-nav__group">Comunicación</div>
                 <a class="av-nav__item<?= navActive('/mensajes.php') ?>" href="/mensajes.php"><?= avIcon('mail') ?> Mensajes<?php if ($unreadMensajes > 0): ?><span class="av-nav__badge"><?= $unreadMensajes ?></span><?php endif; ?></a>
@@ -71,6 +73,7 @@ function navActive(string $path): string
                 <div class="av-nav__group">Aprendizaje</div>
                 <a class="av-nav__item<?= navActive('/estudiante/index.php') ?>" href="/estudiante/index.php"><?= avIcon('book') ?> Mis cursos</a>
                 <a class="av-nav__item<?= navActive('/estudiante/calendario.php') ?>" href="/estudiante/calendario.php"><?= avIcon('calendar') ?> Calendario</a>
+                <a class="av-nav__item<?= navActive('/estudiante/horario.php') ?>" href="/estudiante/horario.php"><?= avIcon('calendar') ?> Horario semanal</a>
                 <a class="av-nav__item<?= navActive('/estudiante/calificaciones.php') ?>" href="/estudiante/calificaciones.php"><?= avIcon('star') ?> Calificaciones</a>
                 <a class="av-nav__item<?= navActive('/estudiante/historial.php') . navActive('/estudiante/constancia.php') ?>" href="/estudiante/historial.php"><?= avIcon('award') ?> Historial académico</a>
                 <div class="av-nav__group">Finanzas</div>
