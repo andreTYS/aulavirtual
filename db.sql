@@ -1,6 +1,6 @@
 -- ============================================================
 -- Aula Virtual - IESTP Benjamin Franklin (Moquegua, Peru)
--- Esquema de base de datos - v9 (examenes en linea, horario semanal)
+-- Esquema de base de datos - v10 (unidades, silabo y notificaciones por correo)
 -- MySQL / MariaDB 10.11+
 -- ============================================================
 
@@ -74,6 +74,8 @@ CREATE TABLE IF NOT EXISTS cursos (
     ciclo TINYINT UNSIGNED NULL,
     periodo_academico_id INT UNSIGNED NULL,
     activo TINYINT(1) NOT NULL DEFAULT 1,
+    silabo_path VARCHAR(500) NULL,
+    competencias TEXT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_cursos_carrera FOREIGN KEY (carrera_id) REFERENCES carreras(id) ON DELETE RESTRICT,
     CONSTRAINT fk_cursos_docente FOREIGN KEY (docente_id) REFERENCES usuarios(id) ON DELETE SET NULL,
@@ -81,6 +83,24 @@ CREATE TABLE IF NOT EXISTS cursos (
     KEY idx_cursos_docente (docente_id),
     KEY idx_cursos_carrera (carrera_id),
     KEY idx_cursos_periodo (periodo_academico_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- unidades: divide un curso en unidades (ej. "Unidad I", "Unidad
+-- II"), cada una con su propio peso dentro del promedio final del
+-- curso. Las tareas y examenes pertenecen a una unidad; el promedio
+-- de cada unidad se calcula primero, y el promedio final del curso
+-- es el promedio ponderado de sus unidades.
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS unidades (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    curso_id INT UNSIGNED NOT NULL,
+    nombre VARCHAR(100) NOT NULL,
+    orden SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    peso DECIMAL(5,2) NOT NULL DEFAULT 1.00,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_unidades_curso FOREIGN KEY (curso_id) REFERENCES cursos(id) ON DELETE CASCADE,
+    KEY idx_unidades_curso (curso_id, orden)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
@@ -156,6 +176,7 @@ CREATE TABLE IF NOT EXISTS tareas (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     curso_id INT UNSIGNED NOT NULL,
     sesion_id INT UNSIGNED NULL,
+    unidad_id INT UNSIGNED NULL,
     titulo VARCHAR(200) NOT NULL,
     descripcion TEXT NULL,
     categoria ENUM('practica','examen','participacion','trabajo') NOT NULL DEFAULT 'practica',
@@ -164,7 +185,9 @@ CREATE TABLE IF NOT EXISTS tareas (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_tareas_curso FOREIGN KEY (curso_id) REFERENCES cursos(id) ON DELETE CASCADE,
     CONSTRAINT fk_tareas_sesion FOREIGN KEY (sesion_id) REFERENCES sesiones(id) ON DELETE SET NULL,
-    KEY idx_tareas_curso (curso_id)
+    CONSTRAINT fk_tareas_unidad FOREIGN KEY (unidad_id) REFERENCES unidades(id) ON DELETE SET NULL,
+    KEY idx_tareas_curso (curso_id),
+    KEY idx_tareas_unidad (unidad_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
@@ -329,13 +352,16 @@ CREATE TABLE IF NOT EXISTS google_tokens (
 CREATE TABLE IF NOT EXISTS examenes (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     curso_id INT UNSIGNED NOT NULL,
+    unidad_id INT UNSIGNED NULL,
     titulo VARCHAR(200) NOT NULL,
     descripcion TEXT NULL,
     peso DECIMAL(5,2) NOT NULL DEFAULT 1.00,
     fecha_limite DATETIME NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_examenes_curso FOREIGN KEY (curso_id) REFERENCES cursos(id) ON DELETE CASCADE,
-    KEY idx_examenes_curso (curso_id)
+    CONSTRAINT fk_examenes_unidad FOREIGN KEY (unidad_id) REFERENCES unidades(id) ON DELETE SET NULL,
+    KEY idx_examenes_curso (curso_id),
+    KEY idx_examenes_unidad (unidad_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------

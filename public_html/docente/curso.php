@@ -4,6 +4,7 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/google_calendar.php';
+require_once __DIR__ . '/../includes/mailer.php';
 requireRole('docente');
 
 $docenteId = (int) $_SESSION['user_id'];
@@ -21,7 +22,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     requireValidCsrf();
     $action = (string) ($_POST['action'] ?? '');
 
-    if ($action === 'create_sesion') {
+    if ($action === 'create_unidad') {
+        $nombre = trim((string) ($_POST['nombre'] ?? ''));
+        $peso = (string) ($_POST['peso'] ?? '1');
+
+        if ($nombre === '') {
+            setFlash('danger', 'Escriba el nombre de la unidad (ej. "Unidad I").');
+        } elseif (!is_numeric($peso) || (float) $peso <= 0) {
+            setFlash('danger', 'El peso debe ser un número mayor a cero.');
+        } else {
+            $maxOrdenStmt = $pdo->prepare('SELECT COALESCE(MAX(orden), 0) FROM unidades WHERE curso_id = :curso_id');
+            $maxOrdenStmt->execute(['curso_id' => $cursoId]);
+            $ins = $pdo->prepare('INSERT INTO unidades (curso_id, nombre, orden, peso) VALUES (:curso_id, :nombre, :orden, :peso)');
+            $ins->execute([
+                'curso_id' => $cursoId, 'nombre' => $nombre,
+                'orden' => (int) $maxOrdenStmt->fetchColumn() + 1, 'peso' => (float) $peso,
+            ]);
+            setFlash('success', 'Unidad creada.');
+        }
+    } elseif ($action === 'update_unidad') {
+        $unidadId = (int) ($_POST['unidad_id'] ?? 0);
+        $nombre = trim((string) ($_POST['nombre'] ?? ''));
+        $peso = (string) ($_POST['peso'] ?? '1');
+
+        if ($nombre === '') {
+            setFlash('danger', 'Escriba el nombre de la unidad.');
+        } elseif (!is_numeric($peso) || (float) $peso <= 0) {
+            setFlash('danger', 'El peso debe ser un número mayor a cero.');
+        } else {
+            $upd = $pdo->prepare('UPDATE unidades SET nombre = :nombre, peso = :peso WHERE id = :id AND curso_id = :curso_id');
+            $upd->execute(['nombre' => $nombre, 'peso' => (float) $peso, 'id' => $unidadId, 'curso_id' => $cursoId]);
+            setFlash('success', 'Unidad actualizada.');
+        }
+    } elseif ($action === 'delete_unidad') {
+        $unidadId = (int) ($_POST['unidad_id'] ?? 0);
+        $enUso = $pdo->prepare(
+            'SELECT (SELECT COUNT(*) FROM tareas WHERE unidad_id = :id1) + (SELECT COUNT(*) FROM examenes WHERE unidad_id = :id2)'
+        );
+        $enUso->execute(['id1' => $unidadId, 'id2' => $unidadId]);
+        if ((int) $enUso->fetchColumn() > 0) {
+            setFlash('danger', 'No se puede eliminar: la unidad tiene tareas o exámenes asignados. Reasígnelos o elimínelos primero.');
+        } else {
+            $del = $pdo->prepare('DELETE FROM unidades WHERE id = :id AND curso_id = :curso_id');
+            $del->execute(['id' => $unidadId, 'curso_id' => $cursoId]);
+            setFlash('success', 'Unidad eliminada.');
+        }
+    } elseif ($action === 'update_silabo') {
+        $competencias = trim((string) ($_POST['competencias'] ?? ''));
+        try {
+            $silaboPath = handleUpload('silabo', 'silabo/' . $cursoId, ['pdf']);
+            $sql = 'UPDATE cursos SET competencias = :competencias' . ($silaboPath ? ', silabo_path = :silabo_path' : '') . ' WHERE id = :id';
+            $params = ['competencias' => $competencias !== '' ? $competencias : null, 'id' => $cursoId];
+            if ($silaboPath) {
+                $params['silabo_path'] = $silaboPath;
+            }
+            $pdo->prepare($sql)->execute($params);
+            setFlash('success', 'Sílabo actualizado.');
+        } catch (RuntimeException $e) {
+            setFlash('danger', $e->getMessage());
+        }
+    } elseif ($action === 'create_sesion') {
         $fecha = (string) ($_POST['fecha'] ?? '');
         $hora = (string) ($_POST['hora_inicio'] ?? '');
         $duracion = (int) ($_POST['duracion_min'] ?? 90);
@@ -195,23 +255,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $fechaLimite = (string) ($_POST['fecha_limite'] ?? '');
         $categoria = (string) ($_POST['categoria'] ?? 'practica');
         $peso = (string) ($_POST['peso'] ?? '1');
+        $unidadId = (int) ($_POST['unidad_id'] ?? 0);
         $sesionIdRaw = (string) ($_POST['sesion_id'] ?? '');
         $sesionId = $sesionIdRaw === '' ? null : (int) $sesionIdRaw;
 
         if (!in_array($categoria, ['practica', 'examen', 'participacion', 'trabajo'], true)) {
             $categoria = 'practica';
         }
+        $unidadValida = $pdo->prepare('SELECT 1 FROM unidades WHERE id = :id AND curso_id = :curso_id');
+        $unidadValida->execute(['id' => $unidadId, 'curso_id' => $cursoId]);
+
         if ($titulo === '' || $fechaLimite === '') {
             setFlash('danger', 'Complete el título y la fecha límite de la tarea.');
+        } elseif (!$unidadValida->fetchColumn()) {
+            setFlash('danger', 'Seleccione a qué unidad pertenece esta tarea. Cree una unidad primero si todavía no tiene ninguna.');
         } elseif (!is_numeric($peso) || (float) $peso <= 0) {
             setFlash('danger', 'El peso debe ser un número mayor a cero.');
         } else {
             $ins = $pdo->prepare(
-                'INSERT INTO tareas (curso_id, sesion_id, titulo, descripcion, categoria, peso, fecha_limite)
-                 VALUES (:curso_id, :sesion_id, :titulo, :descripcion, :categoria, :peso, :fecha_limite)'
+                'INSERT INTO tareas (curso_id, sesion_id, unidad_id, titulo, descripcion, categoria, peso, fecha_limite)
+                 VALUES (:curso_id, :sesion_id, :unidad_id, :titulo, :descripcion, :categoria, :peso, :fecha_limite)'
             );
             $ins->execute([
-                'curso_id' => $cursoId, 'sesion_id' => $sesionId, 'titulo' => $titulo,
+                'curso_id' => $cursoId, 'sesion_id' => $sesionId, 'unidad_id' => $unidadId, 'titulo' => $titulo,
                 'descripcion' => $descripcion, 'categoria' => $categoria, 'peso' => (float) $peso,
                 'fecha_limite' => $fechaLimite,
             ]);
@@ -231,6 +297,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $ins = $pdo->prepare('INSERT INTO avisos (autor_id, curso_id, titulo, contenido) VALUES (:autor_id, :curso_id, :titulo, :contenido)');
             $ins->execute(['autor_id' => $docenteId, 'curso_id' => $cursoId, 'titulo' => $titulo, 'contenido' => $contenido]);
             setFlash('success', 'Aviso publicado para los estudiantes del curso.');
+            notificarAviso($pdo, $titulo, $contenido, $cursoId);
         }
     } elseif ($action === 'delete_aviso') {
         $avisoId = (int) ($_POST['aviso_id'] ?? 0);
@@ -270,10 +337,25 @@ $contenidos = $pdo->prepare(
 $contenidos->execute(['curso_id' => $cursoId]);
 $contenidos = $contenidos->fetchAll();
 
+$unidades = $pdo->prepare('SELECT * FROM unidades WHERE curso_id = :curso_id ORDER BY orden, id');
+$unidades->execute(['curso_id' => $cursoId]);
+$unidades = $unidades->fetchAll();
+
+$unidadesConteo = $pdo->prepare(
+    "SELECT u.id,
+            (SELECT COUNT(*) FROM tareas t WHERE t.unidad_id = u.id) +
+            (SELECT COUNT(*) FROM examenes ex WHERE ex.unidad_id = u.id) AS total
+     FROM unidades u WHERE u.curso_id = :curso_id"
+);
+$unidadesConteo->execute(['curso_id' => $cursoId]);
+$unidadesConteo = array_column($unidadesConteo->fetchAll(), 'total', 'id');
+
 $tareas = $pdo->prepare(
-    'SELECT t.*, (SELECT COUNT(*) FROM entregas e WHERE e.tarea_id = t.id) AS total_entregas,
+    'SELECT t.*, u.nombre AS unidad_nombre,
+            (SELECT COUNT(*) FROM entregas e WHERE e.tarea_id = t.id) AS total_entregas,
             (SELECT COUNT(*) FROM entregas e WHERE e.tarea_id = t.id AND e.calificacion IS NOT NULL) AS total_calificadas
-     FROM tareas t WHERE t.curso_id = :curso_id ORDER BY t.fecha_limite'
+     FROM tareas t LEFT JOIN unidades u ON u.id = t.unidad_id
+     WHERE t.curso_id = :curso_id ORDER BY u.orden, t.fecha_limite'
 );
 $tareas->execute(['curso_id' => $cursoId]);
 $tareas = $tareas->fetchAll();
@@ -320,9 +402,11 @@ $googleConectado = googleIsConnected($pdo, $docenteId);
 $categoriaLabels = ['practica' => 'Práctica', 'examen' => 'Examen', 'participacion' => 'Participación', 'trabajo' => 'Trabajo'];
 
 $examenes = $pdo->prepare(
-    "SELECT e.*, (SELECT COUNT(*) FROM examen_preguntas p WHERE p.examen_id = e.id) AS total_preguntas,
+    "SELECT e.*, u.nombre AS unidad_nombre,
+            (SELECT COUNT(*) FROM examen_preguntas p WHERE p.examen_id = e.id) AS total_preguntas,
             (SELECT COUNT(*) FROM examen_intentos i WHERE i.examen_id = e.id AND i.fecha_envio IS NOT NULL) AS total_rendidos
-     FROM examenes e WHERE e.curso_id = :curso_id ORDER BY e.fecha_limite"
+     FROM examenes e LEFT JOIN unidades u ON u.id = e.unidad_id
+     WHERE e.curso_id = :curso_id ORDER BY u.orden, e.fecha_limite"
 );
 $examenes->execute(['curso_id' => $cursoId]);
 $examenes = $examenes->fetchAll();
@@ -338,8 +422,10 @@ require __DIR__ . '/../includes/header.php';
 
 <div class="av-tabs-wrap">
     <div class="av-tabs">
-        <button type="button" class="av-tab active" data-tab-target="tab-sesiones">Sesiones</button>
+        <button type="button" class="av-tab active" data-tab-target="tab-silabo">Sílabo</button>
+        <button type="button" class="av-tab" data-tab-target="tab-sesiones">Sesiones</button>
         <button type="button" class="av-tab" data-tab-target="tab-materiales">Materiales</button>
+        <button type="button" class="av-tab" data-tab-target="tab-unidades">Unidades</button>
         <button type="button" class="av-tab" data-tab-target="tab-tareas">Tareas</button>
         <button type="button" class="av-tab" data-tab-target="tab-examenes">Exámenes</button>
         <button type="button" class="av-tab" data-tab-target="tab-asistencia">Asistencia</button>
@@ -347,8 +433,30 @@ require __DIR__ . '/../includes/header.php';
         <button type="button" class="av-tab" data-tab-target="tab-comentarios">Foro</button>
     </div>
 
+    <!-- SÍLABO -->
+    <div class="av-tabpanel active" id="tab-silabo">
+        <div class="av-card">
+            <h3>Sílabo del curso</h3>
+            <p class="av-text-muted" style="margin-bottom:14px">Suba el documento del sílabo (PDF) y describa las competencias u objetivos del curso. Sus estudiantes lo verán en la primera pestaña del curso.</p>
+            <form method="post" enctype="multipart/form-data">
+                <?= csrfField() ?>
+                <input type="hidden" name="action" value="update_silabo">
+                <input type="hidden" name="curso_id" value="<?= $cursoId ?>">
+                <div class="av-fg">
+                    <label>Documento del sílabo (PDF)</label>
+                    <?php if ($curso['silabo_path']): ?>
+                        <p style="margin-bottom:8px"><a href="/download.php?type=silabo&id=<?= $cursoId ?>" style="color:var(--ab600);font-weight:600">Ver sílabo actual</a></p>
+                    <?php endif; ?>
+                    <input type="file" name="silabo" accept="application/pdf">
+                </div>
+                <div class="av-fg"><label>Competencias / objetivos del curso</label><textarea name="competencias" rows="5" placeholder="Al finalizar el curso, el estudiante será capaz de..."><?= e($curso['competencias'] ?? '') ?></textarea></div>
+                <button class="av-btn av-btn--primary" type="submit">Guardar sílabo</button>
+            </form>
+        </div>
+    </div>
+
     <!-- SESIONES -->
-    <div class="av-tabpanel active" id="tab-sesiones">
+    <div class="av-tabpanel" id="tab-sesiones">
         <div class="av-card" style="margin-bottom:16px">
             <h3>+ Nueva sesión</h3>
             <?php if ($googleConectado): ?>
@@ -521,8 +629,65 @@ require __DIR__ . '/../includes/header.php';
         </div>
     </div>
 
+    <!-- UNIDADES -->
+    <div class="av-tabpanel" id="tab-unidades">
+        <div class="av-card" style="margin-bottom:16px">
+            <h3>+ Nueva unidad</h3>
+            <p class="av-text-muted" style="margin-bottom:12px">Divida el curso en unidades (ej. "Unidad I", "Unidad II"). Cada tarea y examen pertenece a una unidad; el promedio final del curso es el promedio ponderado de sus unidades.</p>
+            <form method="post" class="av-inline-form">
+                <?= csrfField() ?>
+                <input type="hidden" name="action" value="create_unidad">
+                <input type="hidden" name="curso_id" value="<?= $cursoId ?>">
+                <div class="av-fg"><label>Nombre</label><input type="text" name="nombre" placeholder="Unidad I" required></div>
+                <div class="av-fg"><label>Peso</label><input type="number" name="peso" value="1" min="0.1" step="0.1" required style="max-width:100px"></div>
+                <button class="av-btn av-btn--primary" type="submit">Crear unidad</button>
+            </form>
+        </div>
+
+        <div class="av-table-wrap">
+            <table class="av-table">
+                <thead><tr><th>Unidad</th><th>Peso</th><th>Tareas / exámenes</th><th></th></tr></thead>
+                <tbody>
+                <?php foreach ($unidades as $u): ?>
+                    <tr>
+                        <td>
+                            <form method="post" class="av-inline-form" style="gap:6px">
+                                <?= csrfField() ?>
+                                <input type="hidden" name="action" value="update_unidad">
+                                <input type="hidden" name="curso_id" value="<?= $cursoId ?>">
+                                <input type="hidden" name="unidad_id" value="<?= (int) $u['id'] ?>">
+                                <input type="text" name="nombre" value="<?= e($u['nombre']) ?>" style="width:160px;padding:6px 9px;border:1.5px solid var(--n200);border-radius:6px">
+                        </td>
+                        <td>
+                                <input type="number" name="peso" value="<?= e((string) $u['peso']) ?>" min="0.1" step="0.1" style="width:80px;padding:6px 9px;border:1.5px solid var(--n200);border-radius:6px">
+                        </td>
+                        <td><?= (int) ($unidadesConteo[$u['id']] ?? 0) ?></td>
+                        <td class="av-td-actions">
+                                <button class="av-btn av-btn--secondary av-btn--sm" type="submit">Guardar</button>
+                            </form>
+                            <form method="post" style="display:inline" onsubmit="return confirm('¿Eliminar esta unidad?');">
+                                <?= csrfField() ?>
+                                <input type="hidden" name="action" value="delete_unidad">
+                                <input type="hidden" name="curso_id" value="<?= $cursoId ?>">
+                                <input type="hidden" name="unidad_id" value="<?= (int) $u['id'] ?>">
+                                <button class="av-btn av-btn--danger av-btn--sm" type="submit">Eliminar</button>
+                            </form>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+                <?php if (!$unidades): ?>
+                    <tr><td colspan="4" class="av-empty">Aún no ha creado unidades. Cree la primera arriba antes de agregar tareas o exámenes.</td></tr>
+                <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <!-- TAREAS -->
     <div class="av-tabpanel" id="tab-tareas">
+        <?php if (!$unidades): ?>
+            <div class="av-alert av-alert--danger"><span>Cree al menos una unidad en la pestaña "Unidades" antes de agregar tareas.</span></div>
+        <?php else: ?>
         <div class="av-card" style="margin-bottom:16px">
             <h3>+ Nueva tarea</h3>
             <form method="post">
@@ -531,6 +696,14 @@ require __DIR__ . '/../includes/header.php';
                 <input type="hidden" name="curso_id" value="<?= $cursoId ?>">
                 <div class="av-form-grid">
                     <div class="av-fg"><label>Título</label><input type="text" name="titulo" required></div>
+                    <div class="av-fg">
+                        <label>Unidad</label>
+                        <select name="unidad_id" required>
+                            <?php foreach ($unidades as $u): ?>
+                                <option value="<?= (int) $u['id'] ?>"><?= e($u['nombre']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                     <div class="av-fg">
                         <label>Sesión (opcional)</label>
                         <select name="sesion_id">
@@ -548,17 +721,18 @@ require __DIR__ . '/../includes/header.php';
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div class="av-fg"><label>Peso en el promedio</label><input type="number" name="peso" value="1" min="0.1" step="0.1" required></div>
+                    <div class="av-fg"><label>Peso en el promedio de la unidad</label><input type="number" name="peso" value="1" min="0.1" step="0.1" required></div>
                     <div class="av-fg"><label>Fecha límite</label><input type="datetime-local" name="fecha_limite" required></div>
                 </div>
                 <div class="av-fg"><label>Descripción / indicaciones</label><textarea name="descripcion" rows="2"></textarea></div>
                 <button class="av-btn av-btn--primary" type="submit">Crear tarea</button>
             </form>
         </div>
+        <?php endif; ?>
 
         <div class="av-table-wrap">
             <table class="av-table">
-                <thead><tr><th>Título</th><th>Categoría</th><th>Peso</th><th>Fecha límite</th><th>Entregas</th><th></th></tr></thead>
+                <thead><tr><th>Título</th><th>Unidad</th><th>Categoría</th><th>Peso</th><th>Fecha límite</th><th>Entregas</th><th></th></tr></thead>
                 <tbody>
                 <?php foreach ($tareas as $t): ?>
                     <tr>
@@ -566,6 +740,7 @@ require __DIR__ . '/../includes/header.php';
                             <strong><?= e($t['titulo']) ?></strong>
                             <?php if (isPastDue($t['fecha_limite'])): ?><span class="av-badge av-badge--red">Vencida</span><?php endif; ?>
                         </td>
+                        <td><?= e($t['unidad_nombre'] ?? 'Sin unidad') ?></td>
                         <td><span class="av-badge av-badge--gray"><?= e($categoriaLabels[$t['categoria']] ?? $t['categoria']) ?></span></td>
                         <td><?= number_format((float) $t['peso'], 2) ?></td>
                         <td><?= formatDateEs($t['fecha_limite']) ?></td>
@@ -583,7 +758,7 @@ require __DIR__ . '/../includes/header.php';
                     </tr>
                 <?php endforeach; ?>
                 <?php if (!$tareas): ?>
-                    <tr><td colspan="6" class="av-empty">No hay tareas creadas.</td></tr>
+                    <tr><td colspan="7" class="av-empty">No hay tareas creadas.</td></tr>
                 <?php endif; ?>
                 </tbody>
             </table>
@@ -598,7 +773,7 @@ require __DIR__ . '/../includes/header.php';
         </div>
         <div class="av-table-wrap">
             <table class="av-table">
-                <thead><tr><th>Título</th><th>Preguntas</th><th>Fecha límite</th><th>Rendido por</th></tr></thead>
+                <thead><tr><th>Título</th><th>Unidad</th><th>Preguntas</th><th>Fecha límite</th><th>Rendido por</th></tr></thead>
                 <tbody>
                 <?php foreach ($examenes as $ex): ?>
                     <tr>
@@ -606,13 +781,14 @@ require __DIR__ . '/../includes/header.php';
                             <strong><?= e($ex['titulo']) ?></strong>
                             <?php if (isPastDue($ex['fecha_limite'])): ?><span class="av-badge av-badge--red">Vencido</span><?php endif; ?>
                         </td>
+                        <td><?= e($ex['unidad_nombre'] ?? 'Sin unidad') ?></td>
                         <td><?= (int) $ex['total_preguntas'] ?></td>
                         <td><?= formatDateEs($ex['fecha_limite']) ?></td>
                         <td><?= (int) $ex['total_rendidos'] ?> estudiante(s)</td>
                     </tr>
                 <?php endforeach; ?>
                 <?php if (!$examenes): ?>
-                    <tr><td colspan="4" class="av-empty">No hay exámenes creados todavía.</td></tr>
+                    <tr><td colspan="5" class="av-empty">No hay exámenes creados todavía.</td></tr>
                 <?php endif; ?>
                 </tbody>
             </table>

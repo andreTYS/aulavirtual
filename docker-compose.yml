@@ -10,6 +10,16 @@ services:
       GOOGLE_CLIENT_ID: ""
       GOOGLE_CLIENT_SECRET: ""
       GOOGLE_REDIRECT_URI: "https://aulavirtual.iestpbf.edu.pe/google_oauth_callback.php"
+      # Servidor SMTP para notificaciones por correo (nota nueva, aviso
+      # publicado, mensaje sin leer). Mientras queden vacias, el sistema
+      # sigue funcionando normalmente, solo sin enviar esos correos.
+      SMTP_HOST: ""
+      SMTP_PORT: "587"
+      SMTP_USER: ""
+      SMTP_PASS: ""
+      SMTP_FROM: "no-responder@iestpbf.edu.pe"
+      SMTP_FROM_NAME: "Aula Virtual - IESTP Benjamín Franklin"
+      SMTP_SECURE: "tls"
     volumes:
       - /opt/sites/aulavirtual.iestpbf.edu.pe/public_html:/var/www/html
     labels:

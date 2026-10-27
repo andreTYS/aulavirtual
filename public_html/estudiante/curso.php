@@ -115,7 +115,8 @@ require __DIR__ . '/../includes/header.php';
 
 <div class="av-tabs-wrap">
     <div class="av-tabs">
-        <button type="button" class="av-tab active" data-tab-target="tab-sesiones">Sesiones</button>
+        <button type="button" class="av-tab active" data-tab-target="tab-silabo">Sílabo</button>
+        <button type="button" class="av-tab" data-tab-target="tab-sesiones">Sesiones</button>
         <button type="button" class="av-tab" data-tab-target="tab-materiales">Materiales</button>
         <button type="button" class="av-tab" data-tab-target="tab-tareas">Tareas</button>
         <button type="button" class="av-tab" data-tab-target="tab-examenes">Exámenes</button>
@@ -123,8 +124,25 @@ require __DIR__ . '/../includes/header.php';
         <button type="button" class="av-tab" data-tab-target="tab-comentarios">Foro</button>
     </div>
 
+    <!-- SÍLABO -->
+    <div class="av-tabpanel active" id="tab-silabo">
+        <div class="av-card">
+            <h3>Sílabo del curso</h3>
+            <?php if ($curso['silabo_path']): ?>
+                <p style="margin-bottom:14px"><a href="/download.php?type=silabo&id=<?= $cursoId ?>" style="color:var(--ab600);font-weight:600">Descargar sílabo (PDF)</a></p>
+            <?php endif; ?>
+            <?php if ($curso['competencias']): ?>
+                <h4 style="margin-bottom:6px">Competencias / objetivos del curso</h4>
+                <p style="white-space:pre-wrap"><?= nl2br(e($curso['competencias'])) ?></p>
+            <?php endif; ?>
+            <?php if (!$curso['silabo_path'] && !$curso['competencias']): ?>
+                <div class="av-empty">El docente aún no publicó el sílabo de este curso.</div>
+            <?php endif; ?>
+        </div>
+    </div>
+
     <!-- SESIONES -->
-    <div class="av-tabpanel active" id="tab-sesiones">
+    <div class="av-tabpanel" id="tab-sesiones">
         <div class="av-list">
             <?php foreach ($sesiones as $s): ?>
                 <?php $esHoy = isSessionToday($s['fecha']); $esPasada = isSessionPast($s['fecha']); ?>
