@@ -20,32 +20,48 @@ $stmt = $pdo->prepare(
 $stmt->execute(['estudiante_id' => $estudianteId]);
 $matriculas = $stmt->fetchAll();
 
+$unidadesStmt = $pdo->prepare(
+    "SELECT u.* FROM unidades u
+     JOIN matriculas m ON m.curso_id = u.curso_id
+     WHERE m.estudiante_id = :estudiante_id"
+);
+$unidadesStmt->execute(['estudiante_id' => $estudianteId]);
+$unidadesPorCurso = [];
+foreach ($unidadesStmt->fetchAll() as $u) {
+    $unidadesPorCurso[(int) $u['curso_id']][(int) $u['id']] = $u;
+}
+
+$notasPorUnidad = [];
 $notasStmt = $pdo->prepare(
-    "SELECT t.curso_id, e.calificacion, t.peso FROM entregas e
+    "SELECT t.unidad_id, e.calificacion, t.peso FROM entregas e
      JOIN tareas t ON t.id = e.tarea_id
-     WHERE e.estudiante_id = :estudiante_id AND e.calificacion IS NOT NULL"
+     WHERE e.estudiante_id = :estudiante_id AND e.calificacion IS NOT NULL AND t.unidad_id IS NOT NULL"
 );
 $notasStmt->execute(['estudiante_id' => $estudianteId]);
-$notasPorCurso = [];
 foreach ($notasStmt->fetchAll() as $row) {
-    $notasPorCurso[(int) $row['curso_id']][] = ['calificacion' => (float) $row['calificacion'], 'peso' => (float) $row['peso']];
+    $notasPorUnidad[(int) $row['unidad_id']][] = ['calificacion' => (float) $row['calificacion'], 'peso' => (float) $row['peso']];
 }
 
 $notasExamenStmt = $pdo->prepare(
-    "SELECT ex.curso_id, i.puntaje AS calificacion, ex.peso FROM examen_intentos i
+    "SELECT ex.unidad_id, i.puntaje AS calificacion, ex.peso FROM examen_intentos i
      JOIN examenes ex ON ex.id = i.examen_id
-     WHERE i.estudiante_id = :estudiante_id AND i.puntaje IS NOT NULL"
+     WHERE i.estudiante_id = :estudiante_id AND i.puntaje IS NOT NULL AND ex.unidad_id IS NOT NULL"
 );
 $notasExamenStmt->execute(['estudiante_id' => $estudianteId]);
 foreach ($notasExamenStmt->fetchAll() as $row) {
-    $notasPorCurso[(int) $row['curso_id']][] = ['calificacion' => (float) $row['calificacion'], 'peso' => (float) $row['peso']];
+    $notasPorUnidad[(int) $row['unidad_id']][] = ['calificacion' => (float) $row['calificacion'], 'peso' => (float) $row['peso']];
 }
 
 $porPeriodo = [];
 $promediosCurso = [];
 foreach ($matriculas as $m) {
     $cid = (int) $m['curso_id'];
-    $promedio = promedioPonderado($notasPorCurso[$cid] ?? []);
+    $unidadesCurso = $unidadesPorCurso[$cid] ?? [];
+    $filasFinal = array_map(
+        fn($u) => ['calificacion' => promedioPonderado($notasPorUnidad[(int) $u['id']] ?? []), 'peso' => $u['peso']],
+        $unidadesCurso
+    );
+    $promedio = promedioPonderado($filasFinal);
     $promediosCurso[$cid] = $promedio;
     $periodoKey = $m['periodo_nombre'] ?? 'Sin periodo';
     $porPeriodo[$periodoKey][] = $m + ['promedio' => $promedio];

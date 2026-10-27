@@ -25,18 +25,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $descripcion = trim((string) ($_POST['descripcion'] ?? ''));
         $peso = (string) ($_POST['peso'] ?? '1');
         $fechaLimite = (string) ($_POST['fecha_limite'] ?? '');
+        $unidadId = (int) ($_POST['unidad_id'] ?? 0);
+
+        $unidadValida = $pdo->prepare('SELECT 1 FROM unidades WHERE id = :id AND curso_id = :curso_id');
+        $unidadValida->execute(['id' => $unidadId, 'curso_id' => $cursoId]);
 
         if ($titulo === '' || $fechaLimite === '') {
             setFlash('danger', 'Complete el título y la fecha límite del examen.');
+        } elseif (!$unidadValida->fetchColumn()) {
+            setFlash('danger', 'Seleccione a qué unidad pertenece este examen. Cree una unidad en el curso primero si todavía no tiene ninguna.');
         } elseif (!is_numeric($peso) || (float) $peso <= 0) {
             setFlash('danger', 'El peso debe ser un número mayor a cero.');
         } else {
             $ins = $pdo->prepare(
-                'INSERT INTO examenes (curso_id, titulo, descripcion, peso, fecha_limite)
-                 VALUES (:curso_id, :titulo, :descripcion, :peso, :fecha_limite)'
+                'INSERT INTO examenes (curso_id, unidad_id, titulo, descripcion, peso, fecha_limite)
+                 VALUES (:curso_id, :unidad_id, :titulo, :descripcion, :peso, :fecha_limite)'
             );
             $ins->execute([
-                'curso_id' => $cursoId, 'titulo' => $titulo, 'descripcion' => $descripcion,
+                'curso_id' => $cursoId, 'unidad_id' => $unidadId, 'titulo' => $titulo, 'descripcion' => $descripcion,
                 'peso' => (float) $peso, 'fecha_limite' => $fechaLimite,
             ]);
             setFlash('success', 'Examen creado. Ahora agregue las preguntas.');
@@ -51,10 +57,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     redirect('/docente/examenes.php?curso_id=' . $cursoId);
 }
 
+$unidades = $pdo->prepare('SELECT * FROM unidades WHERE curso_id = :curso_id ORDER BY orden, id');
+$unidades->execute(['curso_id' => $cursoId]);
+$unidades = $unidades->fetchAll();
+
 $examenes = $pdo->prepare(
-    "SELECT e.*, (SELECT COUNT(*) FROM examen_preguntas p WHERE p.examen_id = e.id) AS total_preguntas,
+    "SELECT e.*, u.nombre AS unidad_nombre,
+            (SELECT COUNT(*) FROM examen_preguntas p WHERE p.examen_id = e.id) AS total_preguntas,
             (SELECT COUNT(*) FROM examen_intentos i WHERE i.examen_id = e.id AND i.fecha_envio IS NOT NULL) AS total_rendidos
-     FROM examenes e WHERE e.curso_id = :curso_id ORDER BY e.fecha_limite"
+     FROM examenes e LEFT JOIN unidades u ON u.id = e.unidad_id
+     WHERE e.curso_id = :curso_id ORDER BY u.orden, e.fecha_limite"
 );
 $examenes->execute(['curso_id' => $cursoId]);
 $examenes = $examenes->fetchAll();
@@ -67,6 +79,9 @@ require __DIR__ . '/../includes/header.php';
     <a href="/docente/curso.php?id=<?= $cursoId ?>" class="av-btn av-btn--outline">&larr; Volver al curso</a>
 </div>
 
+<?php if (!$unidades): ?>
+    <div class="av-alert av-alert--danger"><span>Cree al menos una unidad en el curso (pestaña "Unidades") antes de agregar exámenes.</span></div>
+<?php else: ?>
 <div class="av-card" style="margin-bottom:18px">
     <h3>+ Nuevo examen</h3>
     <form method="post">
@@ -75,17 +90,26 @@ require __DIR__ . '/../includes/header.php';
         <input type="hidden" name="curso_id" value="<?= $cursoId ?>">
         <div class="av-form-grid">
             <div class="av-fg"><label>Título</label><input type="text" name="titulo" required></div>
-            <div class="av-fg"><label>Peso en el promedio</label><input type="number" name="peso" value="1" min="0.1" step="0.1" required></div>
+            <div class="av-fg">
+                <label>Unidad</label>
+                <select name="unidad_id" required>
+                    <?php foreach ($unidades as $u): ?>
+                        <option value="<?= (int) $u['id'] ?>"><?= e($u['nombre']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="av-fg"><label>Peso en el promedio de la unidad</label><input type="number" name="peso" value="1" min="0.1" step="0.1" required></div>
             <div class="av-fg"><label>Fecha límite</label><input type="datetime-local" name="fecha_limite" required></div>
         </div>
         <div class="av-fg"><label>Descripción / indicaciones</label><textarea name="descripcion" rows="2"></textarea></div>
         <button class="av-btn av-btn--primary" type="submit">Crear examen y agregar preguntas</button>
     </form>
 </div>
+<?php endif; ?>
 
 <div class="av-table-wrap">
     <table class="av-table">
-        <thead><tr><th>Título</th><th>Preguntas</th><th>Fecha límite</th><th>Rendido por</th><th></th></tr></thead>
+        <thead><tr><th>Título</th><th>Unidad</th><th>Preguntas</th><th>Fecha límite</th><th>Rendido por</th><th></th></tr></thead>
         <tbody>
         <?php foreach ($examenes as $ex): ?>
             <tr>
@@ -93,6 +117,7 @@ require __DIR__ . '/../includes/header.php';
                     <strong><?= e($ex['titulo']) ?></strong>
                     <?php if (isPastDue($ex['fecha_limite'])): ?><span class="av-badge av-badge--red">Vencido</span><?php endif; ?>
                 </td>
+                <td><?= e($ex['unidad_nombre'] ?? 'Sin unidad') ?></td>
                 <td><?= (int) $ex['total_preguntas'] ?></td>
                 <td><?= formatDateEs($ex['fecha_limite']) ?></td>
                 <td><?= (int) $ex['total_rendidos'] ?> estudiante(s)</td>
@@ -110,7 +135,7 @@ require __DIR__ . '/../includes/header.php';
             </tr>
         <?php endforeach; ?>
         <?php if (!$examenes): ?>
-            <tr><td colspan="5" class="av-empty">No hay exámenes creados.</td></tr>
+            <tr><td colspan="6" class="av-empty">No hay exámenes creados.</td></tr>
         <?php endif; ?>
         </tbody>
     </table>

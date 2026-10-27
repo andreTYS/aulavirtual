@@ -3,6 +3,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/includes/mailer.php';
 requireLogin();
 
 $user = currentUser();
@@ -27,6 +28,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'INSERT INTO mensajes (remitente_id, destinatario_id, cuerpo) VALUES (:remitente, :destinatario, :cuerpo)'
         );
         $stmt->execute(['remitente' => $userId, 'destinatario' => $destinatarioId, 'cuerpo' => $cuerpo]);
+
+        $dest = $pdo->prepare('SELECT nombre, apellidos, email FROM usuarios WHERE id = :id');
+        $dest->execute(['id' => $destinatarioId]);
+        if ($dest = $dest->fetch()) {
+            smtpSend(
+                $dest['email'], $dest['nombre'] . ' ' . $dest['apellidos'],
+                'Nuevo mensaje de ' . $user['nombre'] . ' ' . $user['apellidos'],
+                '<p>Hola ' . e($dest['nombre']) . ',</p>'
+                . '<p>Tienes un nuevo mensaje de <strong>' . e($user['nombre'] . ' ' . $user['apellidos']) . '</strong>:</p>'
+                . '<p>' . nl2br(e($cuerpo)) . '</p>'
+                . '<p>Ingresa al Aula Virtual para responder.</p>'
+            );
+        }
     }
     redirect('/mensajes.php?with=' . $destinatarioId);
 }

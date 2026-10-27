@@ -45,3 +45,15 @@ define('APP_NAME', 'Aula Virtual - IESTP Benjamín Franklin');
 define('GOOGLE_CLIENT_ID', getenv('GOOGLE_CLIENT_ID') ?: '');
 define('GOOGLE_CLIENT_SECRET', getenv('GOOGLE_CLIENT_SECRET') ?: '');
 define('GOOGLE_REDIRECT_URI', getenv('GOOGLE_REDIRECT_URI') ?: 'https://aulavirtual.iestpbf.edu.pe/google_oauth_callback.php');
+
+// Servidor SMTP para notificaciones por correo (nota nueva, aviso
+// publicado, mensaje sin leer). Vacio por defecto: mientras no este
+// configurado, el sistema sigue funcionando normalmente, solo sin enviar
+// esos correos.
+define('SMTP_HOST', getenv('SMTP_HOST') ?: '');
+define('SMTP_PORT', (int) (getenv('SMTP_PORT') ?: 587));
+define('SMTP_USER', getenv('SMTP_USER') ?: '');
+define('SMTP_PASS', getenv('SMTP_PASS') ?: '');
+define('SMTP_FROM', getenv('SMTP_FROM') ?: 'no-responder@iestpbf.edu.pe');
+define('SMTP_FROM_NAME', getenv('SMTP_FROM_NAME') ?: APP_NAME);
+define('SMTP_SECURE', getenv('SMTP_SECURE') ?: 'tls');

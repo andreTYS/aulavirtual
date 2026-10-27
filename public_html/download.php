@@ -14,7 +14,7 @@ $type = (string) ($_GET['type'] ?? '');
 $id = (int) ($_GET['id'] ?? 0);
 $user = currentUser();
 
-if (!in_array($type, ['contenido', 'entrega', 'comprobante'], true) || $id <= 0) {
+if (!in_array($type, ['contenido', 'entrega', 'comprobante', 'silabo'], true) || $id <= 0) {
     http_response_code(400);
     die('Solicitud inválida.');
 }
@@ -86,6 +86,34 @@ if ($type === 'contenido') {
 
     $relativePath = $row['archivo_path'];
     $downloadName = $row['titulo'];
+} elseif ($type === 'silabo') {
+    $stmt = $pdo->prepare('SELECT silabo_path, nombre, docente_id FROM cursos WHERE id = :id');
+    $stmt->execute(['id' => $id]);
+    $row = $stmt->fetch();
+
+    if (!$row || !$row['silabo_path']) {
+        http_response_code(404);
+        die('Archivo no encontrado.');
+    }
+
+    $allowed = false;
+    if ($user['rol'] === 'administrador') {
+        $allowed = true;
+    } elseif ($user['rol'] === 'docente' && (int) $row['docente_id'] === (int) $user['id']) {
+        $allowed = true;
+    } elseif ($user['rol'] === 'estudiante') {
+        $chk = $pdo->prepare('SELECT 1 FROM matriculas WHERE curso_id = :curso_id AND estudiante_id = :estudiante_id');
+        $chk->execute(['curso_id' => $id, 'estudiante_id' => $user['id']]);
+        $allowed = (bool) $chk->fetchColumn();
+    }
+
+    if (!$allowed) {
+        http_response_code(403);
+        die('No tiene permisos para descargar este archivo.');
+    }
+
+    $relativePath = $row['silabo_path'];
+    $downloadName = 'silabo_' . $row['nombre'];
 } else {
     $stmt = $pdo->prepare('SELECT comprobante_path, estudiante_id, numero_voucher FROM pagos WHERE id = :id');
     $stmt->execute(['id' => $id]);

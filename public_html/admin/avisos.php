@@ -3,6 +3,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../includes/mailer.php';
 requireRole('administrador');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -18,6 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $ins = $pdo->prepare('INSERT INTO avisos (autor_id, curso_id, titulo, contenido) VALUES (:autor_id, NULL, :titulo, :contenido)');
             $ins->execute(['autor_id' => $_SESSION['user_id'], 'titulo' => $titulo, 'contenido' => $contenido]);
             setFlash('success', 'Aviso publicado para todo el instituto.');
+            notificarAviso($pdo, $titulo, $contenido, null);
         }
     } elseif ($action === 'delete') {
         $id = (int) ($_POST['id'] ?? 0);

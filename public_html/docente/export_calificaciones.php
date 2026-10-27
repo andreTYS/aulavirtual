@@ -16,13 +16,23 @@ if (!$curso) {
     redirect('/docente/index.php');
 }
 
-$stmt = $pdo->prepare('SELECT id, titulo, peso FROM tareas WHERE curso_id = :curso_id ORDER BY fecha_limite');
+$stmt = $pdo->prepare('SELECT * FROM unidades WHERE curso_id = :curso_id ORDER BY orden, id');
 $stmt->execute(['curso_id' => $cursoId]);
-$tareas = $stmt->fetchAll();
+$unidades = $stmt->fetchAll();
 
-$stmt = $pdo->prepare('SELECT id, titulo, peso FROM examenes WHERE curso_id = :curso_id ORDER BY fecha_limite');
+$stmt = $pdo->prepare('SELECT id, unidad_id, titulo, peso FROM tareas WHERE curso_id = :curso_id ORDER BY fecha_limite');
 $stmt->execute(['curso_id' => $cursoId]);
-$examenes = $stmt->fetchAll();
+$tareasPorUnidad = [];
+foreach ($stmt->fetchAll() as $t) {
+    $tareasPorUnidad[(int) $t['unidad_id']][] = $t;
+}
+
+$stmt = $pdo->prepare('SELECT id, unidad_id, titulo, peso FROM examenes WHERE curso_id = :curso_id ORDER BY fecha_limite');
+$stmt->execute(['curso_id' => $cursoId]);
+$examenesPorUnidad = [];
+foreach ($stmt->fetchAll() as $ex) {
+    $examenesPorUnidad[(int) $ex['unidad_id']][] = $ex;
+}
 
 $stmt = $pdo->prepare(
     "SELECT u.id, u.nombre, u.apellidos FROM usuarios u
@@ -60,30 +70,47 @@ $out = fopen('php://output', 'w');
 fwrite($out, "\xEF\xBB\xBF");
 
 $encabezado = ['Estudiante'];
-foreach ($tareas as $t) {
-    $encabezado[] = $t['titulo'] . ' (peso ' . number_format((float) $t['peso'], 2) . ')';
+foreach ($unidades as $u) {
+    $uid = (int) $u['id'];
+    foreach ($tareasPorUnidad[$uid] ?? [] as $t) {
+        $encabezado[] = $u['nombre'] . ' - ' . $t['titulo'] . ' (peso ' . number_format((float) $t['peso'], 2) . ')';
+    }
+    foreach ($examenesPorUnidad[$uid] ?? [] as $ex) {
+        $encabezado[] = $u['nombre'] . ' - ' . $ex['titulo'] . ' (peso ' . number_format((float) $ex['peso'], 2) . ')';
+    }
+    $encabezado[] = $u['nombre'] . ' - Promedio (peso ' . number_format((float) $u['peso'], 2) . ' en el final)';
 }
-foreach ($examenes as $ex) {
-    $encabezado[] = $ex['titulo'] . ' (peso ' . number_format((float) $ex['peso'], 2) . ')';
-}
-$encabezado[] = 'Promedio ponderado';
+$encabezado[] = 'Promedio final';
 fputcsv($out, $encabezado);
 
 foreach ($estudiantes as $est) {
     $eid = (int) $est['id'];
     $fila = [$est['nombre'] . ' ' . $est['apellidos']];
-    foreach ($tareas as $t) {
-        $fila[] = $notas[$eid][$t['id']] ?? '';
+    $promediosUnidad = [];
+
+    foreach ($unidades as $u) {
+        $uid = (int) $u['id'];
+        $tUnidad = $tareasPorUnidad[$uid] ?? [];
+        $exUnidad = $examenesPorUnidad[$uid] ?? [];
+
+        foreach ($tUnidad as $t) {
+            $fila[] = $notas[$eid][$t['id']] ?? '';
+        }
+        foreach ($exUnidad as $ex) {
+            $fila[] = $notasExamen[$eid][$ex['id']] ?? '';
+        }
+
+        $promedioU = promedioUnidad($eid, $tUnidad, $exUnidad, $notas, $notasExamen);
+        $promediosUnidad[$uid] = $promedioU;
+        $fila[] = $promedioU !== null ? number_format($promedioU, 2) : '';
     }
-    foreach ($examenes as $ex) {
-        $fila[] = $notasExamen[$eid][$ex['id']] ?? '';
-    }
-    $filasPromedio = array_merge(
-        array_map(fn($t) => ['calificacion' => $notas[$eid][$t['id']] ?? null, 'peso' => $t['peso']], $tareas),
-        array_map(fn($ex) => ['calificacion' => $notasExamen[$eid][$ex['id']] ?? null, 'peso' => $ex['peso']], $examenes)
+
+    $filasFinal = array_map(
+        fn($u) => ['calificacion' => $promediosUnidad[(int) $u['id']], 'peso' => $u['peso']],
+        $unidades
     );
-    $promedio = promedioPonderado($filasPromedio);
-    $fila[] = $promedio !== null ? number_format($promedio, 2) : '';
+    $promedioFinal = promedioPonderado($filasFinal);
+    $fila[] = $promedioFinal !== null ? number_format($promedioFinal, 2) : '';
     fputcsv($out, $fila);
 }
 fclose($out);

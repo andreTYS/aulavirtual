@@ -192,6 +192,21 @@ function promedioPonderado(array $filas): ?float
 }
 
 /**
+ * Promedio de un estudiante dentro de una unidad: combina sus tareas y
+ * exámenes de esa unidad (cada uno con su propio peso) en un solo
+ * promedio ponderado. $notas y $notasExamen son mapas
+ * [estudiante_id => [tarea_id/examen_id => calificacion]].
+ */
+function promedioUnidad(int $estudianteId, array $tareasUnidad, array $examenesUnidad, array $notas, array $notasExamen): ?float
+{
+    $filas = array_merge(
+        array_map(fn($t) => ['calificacion' => $notas[$estudianteId][$t['id']] ?? null, 'peso' => $t['peso']], $tareasUnidad),
+        array_map(fn($ex) => ['calificacion' => $notasExamen[$estudianteId][$ex['id']] ?? null, 'peso' => $ex['peso']], $examenesUnidad)
+    );
+    return promedioPonderado($filas);
+}
+
+/**
  * Devuelve el markup de un icono SVG en linea (sin dependencias externas).
  */
 function avIcon(string $name): string

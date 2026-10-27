@@ -3,6 +3,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../includes/mailer.php';
 requireRole('docente');
 
 $docenteId = (int) $_SESSION['user_id'];
@@ -45,6 +46,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'comentario' => $comentario !== '' ? $comentario : null,
         ]);
         setFlash('success', 'Calificación registrada.');
+
+        $est = $pdo->prepare('SELECT nombre, apellidos, email FROM usuarios WHERE id = :id');
+        $est->execute(['id' => $estudianteId]);
+        if ($est = $est->fetch()) {
+            smtpSend(
+                $est['email'], $est['nombre'] . ' ' . $est['apellidos'],
+                'Nueva calificación en ' . $tarea['curso_nombre'],
+                '<p>Hola ' . e($est['nombre']) . ',</p>'
+                . '<p>Tienes una nueva calificación en <strong>' . e($tarea['titulo']) . '</strong> (' . e($tarea['curso_nombre']) . '): '
+                . '<strong>' . number_format((float) $calificacion, 2) . ' / 20</strong>.</p>'
+                . '<p>Ingresa al Aula Virtual para ver el detalle.</p>'
+            );
+        }
     }
     redirect('/docente/tarea_entregas.php?tarea_id=' . $tareaId);
 }
